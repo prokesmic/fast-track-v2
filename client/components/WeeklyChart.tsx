@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { View, StyleSheet } from "react-native";
 import Animated, {
   useAnimatedStyle,
+  useSharedValue,
   withSpring,
   withDelay,
 } from "react-native-reanimated";
@@ -9,6 +10,8 @@ import Animated, {
 import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks/useTheme";
 import { Spacing, BorderRadius, Colors } from "@/constants/theme";
+
+const BAR_CONTAINER_HEIGHT = 100;
 
 interface DayData {
   day: string;
@@ -36,24 +39,29 @@ function AnimatedBar({
   index: number;
 }) {
   const { theme } = useTheme();
-  const height = (hours / maxHours) * 100;
-  const targetHeight = (target / maxHours) * 100;
+  const heightFraction = hours / maxHours;
+  const targetHeightFraction = target / maxHours;
+  const animatedHeight = useSharedValue(0);
+
+  useEffect(() => {
+    animatedHeight.value = withDelay(
+      index * 50,
+      withSpring(heightFraction * BAR_CONTAINER_HEIGHT, { damping: 15, stiffness: 150 })
+    );
+  }, [heightFraction, index]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    height: withDelay(
-      index * 50,
-      withSpring(`${height}%`, { damping: 15, stiffness: 150 })
-    ),
+    height: animatedHeight.value,
   }));
 
   return (
     <View style={styles.barWrapper}>
-      <View style={[styles.barContainer, { backgroundColor: theme.backgroundSecondary }]}>
+      <View style={[styles.barContainer, { backgroundColor: theme.backgroundSecondary, height: BAR_CONTAINER_HEIGHT }]}>
         <View
           style={[
             styles.targetLine,
             {
-              bottom: `${targetHeight}%`,
+              bottom: targetHeightFraction * BAR_CONTAINER_HEIGHT,
               backgroundColor: theme.textSecondary,
             },
           ]}
@@ -170,7 +178,7 @@ const styles = StyleSheet.create({
   },
   chartArea: {
     flexDirection: "row",
-    height: 140,
+    height: BAR_CONTAINER_HEIGHT + 40,
   },
   yAxis: {
     width: 30,
