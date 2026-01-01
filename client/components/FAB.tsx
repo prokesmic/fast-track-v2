@@ -63,16 +63,15 @@ export function FAB({ onPress, icon = "plus" }: FABProps) {
 
 const styles = StyleSheet.create({
   fab: {
-    position: "absolute",
-    width: 60,
-    height: 60,
+    width: 64,
+    height: 64,
     borderRadius: BorderRadius.full,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 10,
   },
 });
