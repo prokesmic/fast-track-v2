@@ -13,19 +13,20 @@ import { Feather } from "@expo/vector-icons";
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 interface Milestone {
-  hours: number;
   icon: string;
   color: string;
+  hours: number;
 }
 
 const FASTING_MILESTONES: Milestone[] = [
-  { hours: 12, icon: "droplet", color: "#3B82F6" },
-  { hours: 14, icon: "zap", color: "#F59E0B" },
-  { hours: 16, icon: "activity", color: Colors.light.primary },
-  { hours: 18, icon: "thermometer", color: "#EF4444" },
-  { hours: 20, icon: "settings", color: "#6B7280" },
-  { hours: 22, icon: "edit-3", color: "#8B5CF6" },
-  { hours: 24, icon: "refresh-cw", color: "#8B5CF6" },
+  { icon: "droplet", color: "#3B82F6", hours: 0 },
+  { icon: "zap", color: "#F59E0B", hours: 12 },
+  { icon: "activity", color: Colors.light.primary, hours: 14 },
+  { icon: "thermometer", color: "#EF4444", hours: 16 },
+  { icon: "settings", color: "#6B7280", hours: 18 },
+  { icon: "edit-3", color: "#8B5CF6", hours: 20 },
+  { icon: "refresh-cw", color: "#06B6D4", hours: 24 },
+  { icon: "shield", color: Colors.light.success, hours: 48 },
 ];
 
 interface ProgressRingProps {
@@ -50,7 +51,7 @@ export function ProgressRing({
   const { theme, isDark } = useTheme();
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const milestoneRadius = radius + strokeWidth / 2 + 24;
+  const milestoneRadius = radius + strokeWidth / 2 + 26;
 
   const animatedProps = useAnimatedProps(() => {
     const clampedProgress = Math.min(Math.max(progress, 0), 1);
@@ -62,9 +63,9 @@ export function ProgressRing({
     };
   }, [progress, circumference]);
 
-  const getMilestonePosition = (hours: number) => {
-    const progressFraction = hours / targetHours;
-    const angle = progressFraction * 360 - 90;
+  const getMilestonePosition = (index: number, total: number) => {
+    const angleStep = 360 / total;
+    const angle = index * angleStep - 90;
     const radian = (angle * Math.PI) / 180;
     const centerX = size / 2 + 30;
     const centerY = size / 2 + 30;
@@ -73,10 +74,6 @@ export function ProgressRing({
       y: centerY + milestoneRadius * Math.sin(radian),
     };
   };
-
-  const visibleMilestones = showMilestones
-    ? FASTING_MILESTONES.filter((m) => m.hours <= targetHours && m.hours > 0)
-    : [];
 
   return (
     <View style={[styles.container, { width: size + 60, height: size + 60 }]}>
@@ -112,14 +109,13 @@ export function ProgressRing({
         <View style={styles.content}>{children}</View>
       </View>
 
-      {visibleMilestones.map((milestone) => {
-        const pos = getMilestonePosition(milestone.hours);
+      {showMilestones && FASTING_MILESTONES.map((milestone, index) => {
+        const pos = getMilestonePosition(index, FASTING_MILESTONES.length);
         const isPassed = elapsedHours >= milestone.hours;
-        const isActive = elapsedHours >= milestone.hours - 2 && elapsedHours < milestone.hours + 2;
 
         return (
           <View
-            key={milestone.hours}
+            key={index}
             style={[
               styles.milestone,
               {
@@ -131,7 +127,7 @@ export function ProgressRing({
             <Feather
               name={milestone.icon as any}
               size={20}
-              color={isPassed || isActive ? milestone.color : "#9CA3AF"}
+              color={isPassed ? milestone.color : "#9CA3AF"}
             />
           </View>
         );
