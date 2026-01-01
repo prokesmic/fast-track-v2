@@ -1,12 +1,24 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import MainTabNavigator from "@/navigation/MainTabNavigator";
-import ModalScreen from "@/screens/ModalScreen";
+import StartFastModal from "@/screens/StartFastModal";
+import PlanDetailModal from "@/screens/PlanDetailModal";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
+
+export type FastingPlan = {
+  id: string;
+  name: string;
+  fastingHours: number;
+  eatingHours: number;
+  description: string;
+  difficulty: "Easy" | "Medium" | "Hard" | "Expert";
+  benefits: string[];
+};
 
 export type RootStackParamList = {
   Main: undefined;
-  Modal: undefined;
+  StartFast: { plan?: FastingPlan };
+  PlanDetail: { plan: FastingPlan };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -22,11 +34,19 @@ export default function RootStackNavigator() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="Modal"
-        component={ModalScreen}
+        name="StartFast"
+        component={StartFastModal}
         options={{
           presentation: "modal",
-          headerTitle: "Modal",
+          headerTitle: "Start Fast",
+        }}
+      />
+      <Stack.Screen
+        name="PlanDetail"
+        component={PlanDetailModal}
+        options={{
+          presentation: "modal",
+          headerTitle: "Plan Details",
         }}
       />
     </Stack.Navigator>
