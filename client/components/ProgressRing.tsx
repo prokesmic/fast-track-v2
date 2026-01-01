@@ -8,7 +8,6 @@ import Animated, {
 } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
 import { Colors } from "@/constants/theme";
-import { ThemedText } from "@/components/ThemedText";
 import { Feather } from "@expo/vector-icons";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -20,12 +19,13 @@ interface Milestone {
 }
 
 const FASTING_MILESTONES: Milestone[] = [
-  { hours: 12, icon: "zap", color: "#F59E0B" },
+  { hours: 12, icon: "droplet", color: "#3B82F6" },
+  { hours: 14, icon: "zap", color: "#F59E0B" },
   { hours: 16, icon: "activity", color: Colors.light.primary },
   { hours: 18, icon: "thermometer", color: "#EF4444" },
+  { hours: 20, icon: "settings", color: "#6B7280" },
+  { hours: 22, icon: "edit-3", color: "#8B5CF6" },
   { hours: 24, icon: "refresh-cw", color: "#8B5CF6" },
-  { hours: 48, icon: "arrow-up-circle", color: "#06B6D4" },
-  { hours: 72, icon: "shield", color: Colors.light.success },
 ];
 
 interface ProgressRingProps {
@@ -41,7 +41,7 @@ interface ProgressRingProps {
 export function ProgressRing({
   progress,
   size = 280,
-  strokeWidth = 16,
+  strokeWidth = 20,
   children,
   targetHours = 16,
   elapsedHours = 0,
@@ -50,7 +50,7 @@ export function ProgressRing({
   const { theme, isDark } = useTheme();
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const milestoneIconSize = 28;
+  const milestoneRadius = radius + strokeWidth / 2 + 24;
 
   const animatedProps = useAnimatedProps(() => {
     const clampedProgress = Math.min(Math.max(progress, 0), 1);
@@ -66,9 +66,11 @@ export function ProgressRing({
     const progressFraction = hours / targetHours;
     const angle = progressFraction * 360 - 90;
     const radian = (angle * Math.PI) / 180;
+    const centerX = size / 2 + 30;
+    const centerY = size / 2 + 30;
     return {
-      x: size / 2 + radius * Math.cos(radian),
-      y: size / 2 + radius * Math.sin(radian),
+      x: centerX + milestoneRadius * Math.cos(radian),
+      y: centerY + milestoneRadius * Math.sin(radian),
     };
   };
 
@@ -77,40 +79,43 @@ export function ProgressRing({
     : [];
 
   return (
-    <View style={[styles.container, { width: size, height: size }]}>
-      <Svg width={size} height={size} style={styles.svg}>
-        <Defs>
-          <LinearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={Colors.light.primary} />
-            <Stop offset="100%" stopColor={Colors.light.secondary} />
-          </LinearGradient>
-        </Defs>
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke={isDark ? Colors.dark.backgroundSecondary : Colors.light.backgroundSecondary}
-          strokeWidth={strokeWidth}
-          fill="none"
-        />
-        <AnimatedCircle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="url(#progressGradient)"
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeDasharray={circumference}
-          animatedProps={animatedProps}
-          strokeLinecap="round"
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
-      </Svg>
-      <View style={styles.content}>{children}</View>
+    <View style={[styles.container, { width: size + 60, height: size + 60 }]}>
+      <View style={[styles.ringContainer, { width: size, height: size }]}>
+        <Svg width={size} height={size} style={styles.svg}>
+          <Defs>
+            <LinearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <Stop offset="0%" stopColor={Colors.light.primary} />
+              <Stop offset="100%" stopColor={Colors.light.secondary} />
+            </LinearGradient>
+          </Defs>
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={isDark ? Colors.dark.backgroundSecondary : "#E5E7EB"}
+            strokeWidth={strokeWidth}
+            fill="none"
+          />
+          <AnimatedCircle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke="url(#progressGradient)"
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeDasharray={circumference}
+            animatedProps={animatedProps}
+            strokeLinecap="round"
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          />
+        </Svg>
+        <View style={styles.content}>{children}</View>
+      </View>
 
       {visibleMilestones.map((milestone) => {
         const pos = getMilestonePosition(milestone.hours);
         const isPassed = elapsedHours >= milestone.hours;
+        const isActive = elapsedHours >= milestone.hours - 2 && elapsedHours < milestone.hours + 2;
 
         return (
           <View
@@ -118,52 +123,17 @@ export function ProgressRing({
             style={[
               styles.milestone,
               {
-                width: milestoneIconSize,
-                height: milestoneIconSize,
-                borderRadius: milestoneIconSize / 2,
-                left: pos.x - milestoneIconSize / 2,
-                top: pos.y - milestoneIconSize / 2,
-                backgroundColor: isPassed
-                  ? milestone.color
-                  : theme.backgroundDefault,
-                borderWidth: 2,
-                borderColor: isPassed ? milestone.color : theme.backgroundSecondary,
+                left: pos.x - 14,
+                top: pos.y - 14,
               },
             ]}
           >
             <Feather
               name={milestone.icon as any}
-              size={12}
-              color={isPassed ? "#FFFFFF" : theme.textSecondary}
+              size={20}
+              color={isPassed || isActive ? milestone.color : "#9CA3AF"}
             />
           </View>
-        );
-      })}
-
-      {visibleMilestones.map((milestone) => {
-        const pos = getMilestonePosition(milestone.hours);
-        const isPassed = elapsedHours >= milestone.hours;
-        const labelOffset = 22;
-        const progressFraction = milestone.hours / targetHours;
-        const angle = progressFraction * 360 - 90;
-        const radian = (angle * Math.PI) / 180;
-        const labelX = size / 2 + (radius + labelOffset) * Math.cos(radian);
-        const labelY = size / 2 + (radius + labelOffset) * Math.sin(radian);
-
-        return (
-          <ThemedText
-            key={`label-${milestone.hours}`}
-            style={[
-              styles.milestoneLabel,
-              {
-                left: labelX - 14,
-                top: labelY - 8,
-                color: isPassed ? milestone.color : theme.textSecondary,
-              },
-            ]}
-          >
-            {milestone.hours}h
-          </ThemedText>
         );
       })}
     </View>
@@ -176,6 +146,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     position: "relative",
   },
+  ringContainer: {
+    position: "absolute",
+    top: 30,
+    left: 30,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   svg: {
     position: "absolute",
   },
@@ -185,15 +162,9 @@ const styles = StyleSheet.create({
   },
   milestone: {
     position: "absolute",
+    width: 28,
+    height: 28,
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 10,
-  },
-  milestoneLabel: {
-    position: "absolute",
-    fontSize: 10,
-    fontWeight: "700",
-    textAlign: "center",
-    width: 28,
   },
 });
