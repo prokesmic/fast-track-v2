@@ -35,7 +35,7 @@ export default function HistoryScreen() {
   );
 
   const completedFasts = useMemo(() => 
-    fasts.filter((f) => f.completed && f.endTime).sort((a, b) => (b.endTime || 0) - (a.endTime || 0)),
+    fasts.filter((f) => f.endTime).sort((a, b) => (b.endTime || 0) - (a.endTime || 0)),
     [fasts]
   );
 
