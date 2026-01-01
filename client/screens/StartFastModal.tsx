@@ -1,5 +1,5 @@
 import React, { useState, useLayoutEffect } from "react";
-import { View, StyleSheet, Pressable, TextInput, Alert, Dimensions } from "react-native";
+import { View, StyleSheet, Pressable, TextInput, Alert, Dimensions, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -9,7 +9,10 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  runOnJS,
+  interpolateColor,
 } from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import * as Haptics from "expo-haptics";
 
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
@@ -17,10 +20,12 @@ import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks/useTheme";
 import { useFasting } from "@/hooks/useFasting";
 import { FASTING_PLANS, FastingPlan } from "@/lib/plans";
-import { Spacing, BorderRadius, Colors } from "@/constants/theme";
+import { Spacing, BorderRadius, Colors, Shadows } from "@/constants/theme";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const SLIDER_WIDTH = SCREEN_WIDTH - Spacing.lg * 4;
+const THUMB_SIZE = 28;
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "StartFast">;
 type StartFastRouteProp = RouteProp<RootStackParamList, "StartFast">;
@@ -31,15 +36,28 @@ interface PlanButtonProps {
   plan: FastingPlan;
   selected: boolean;
   onPress: () => void;
+  index: number;
 }
 
-function PlanButton({ plan, selected, onPress }: PlanButtonProps) {
+function PlanButton({ plan, selected, onPress, index }: PlanButtonProps) {
   const { theme } = useTheme();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
+
+  const getGradientColors = () => {
+    const gradients = [
+      [Colors.light.primary, Colors.light.primaryLight],
+      [Colors.light.secondary, Colors.light.secondaryLight],
+      ["#F59E0B", "#FBBF24"],
+      ["#EC4899", "#F472B6"],
+    ];
+    return gradients[index % gradients.length];
+  };
+
+  const [startColor, endColor] = getGradientColors();
 
   return (
     <AnimatedPressable
@@ -49,24 +67,27 @@ function PlanButton({ plan, selected, onPress }: PlanButtonProps) {
       style={[
         styles.planButton,
         {
-          backgroundColor: selected ? theme.primary : theme.backgroundDefault,
-          borderWidth: selected ? 0 : 1,
-          borderColor: theme.backgroundTertiary,
+          backgroundColor: selected ? theme.backgroundDefault : theme.backgroundSecondary,
+          borderWidth: selected ? 2 : 0,
+          borderColor: selected ? startColor : "transparent",
         },
         animatedStyle,
       ]}
     >
+      <View style={[styles.planIconContainer, { backgroundColor: startColor + "20" }]}>
+        <View style={[styles.planIconDot, { backgroundColor: startColor }]} />
+      </View>
       <ThemedText
         type="h4"
-        style={{ color: selected ? "#FFFFFF" : theme.text }}
+        style={{ color: theme.text }}
       >
         {plan.name}
       </ThemedText>
       <ThemedText
         type="small"
-        style={{ color: selected ? "rgba(255,255,255,0.8)" : theme.textSecondary }}
+        style={{ color: theme.textSecondary }}
       >
-        {plan.fastingHours}h fast
+        {plan.fastingHours}h fast : {plan.eatingHours}h eat
       </ThemedText>
     </AnimatedPressable>
   );
@@ -83,55 +104,130 @@ function DurationSlider({
   min: number;
   max: number;
 }) {
-  const { theme } = useTheme();
-  const percentage = ((value - min) / (max - min)) * 100;
+  const { theme, colorScheme } = useTheme();
+  const colors = Colors[colorScheme];
+  const gestureStartX = useSharedValue(0);
+  const thumbScale = useSharedValue(1);
+  const lastTriggeredValue = useSharedValue(value);
 
-  const handlePress = (e: { nativeEvent: { locationX: number } }) => {
-    const sliderWidth = SCREEN_WIDTH - Spacing.lg * 4 - Spacing.lg * 2;
-    const newPercentage = Math.max(0, Math.min(100, (e.nativeEvent.locationX / sliderWidth) * 100));
-    const newValue = Math.round(min + (newPercentage / 100) * (max - min));
+  const valueToX = (v: number) => ((v - min) / (max - min)) * SLIDER_WIDTH;
+  const xToValue = (x: number) => Math.round(min + (Math.max(0, Math.min(SLIDER_WIDTH, x)) / SLIDER_WIDTH) * (max - min));
+
+  const currentX = useSharedValue(valueToX(value));
+
+  React.useEffect(() => {
+    currentX.value = valueToX(value);
+    lastTriggeredValue.value = value;
+  }, [value, min, max]);
+
+  const triggerHaptic = () => {
     Haptics.selectionAsync();
+  };
+
+  const updateValue = (newValue: number) => {
     onChange(newValue);
   };
 
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      gestureStartX.value = currentX.value;
+      thumbScale.value = withSpring(1.15);
+    })
+    .onUpdate((e) => {
+      const newX = Math.max(0, Math.min(SLIDER_WIDTH, gestureStartX.value + e.translationX));
+      currentX.value = newX;
+      const newValue = xToValue(newX);
+      if (newValue !== lastTriggeredValue.value) {
+        lastTriggeredValue.value = newValue;
+        runOnJS(triggerHaptic)();
+        runOnJS(updateValue)(newValue);
+      }
+    })
+    .onEnd(() => {
+      thumbScale.value = withSpring(1);
+    });
+
+  const tapGesture = Gesture.Tap()
+    .onEnd((e) => {
+      const newX = Math.max(0, Math.min(SLIDER_WIDTH, e.x));
+      currentX.value = withSpring(newX);
+      const newValue = xToValue(newX);
+      if (newValue !== lastTriggeredValue.value) {
+        lastTriggeredValue.value = newValue;
+        runOnJS(triggerHaptic)();
+        runOnJS(updateValue)(newValue);
+      }
+    });
+
+  const composedGesture = Gesture.Race(panGesture, tapGesture);
+
+  const thumbStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: currentX.value - THUMB_SIZE / 2 },
+      { scale: thumbScale.value },
+    ],
+  }));
+
+  const fillStyle = useAnimatedStyle(() => ({
+    width: currentX.value,
+  }));
+
+  const markers = [12, 24, 48, 72];
+
   return (
     <View style={styles.sliderContainer}>
-      <View style={styles.sliderLabels}>
-        <ThemedText type="small" style={{ color: theme.textSecondary }}>
-          {min}h
-        </ThemedText>
-        <ThemedText type="small" style={{ color: theme.textSecondary }}>
-          {max}h
-        </ThemedText>
-      </View>
-      <Pressable onPress={handlePress}>
-        <View style={[styles.sliderTrack, { backgroundColor: theme.backgroundSecondary }]}>
-          <View
-            style={[
-              styles.sliderFill,
-              {
-                width: `${percentage}%`,
-                backgroundColor: Colors.light.primary,
-              },
-            ]}
-          />
-          <View
-            style={[
-              styles.sliderThumb,
-              {
-                left: `${percentage}%`,
-                backgroundColor: Colors.light.primary,
-              },
-            ]}
-          />
-        </View>
-      </Pressable>
-      <View style={styles.sliderValue}>
-        <ThemedText type="h2" style={{ color: theme.primary }}>
+      <View style={styles.sliderValueContainer}>
+        <ThemedText type="timerLarge" style={{ color: colors.primary }}>
           {value}
         </ThemedText>
         <ThemedText type="body" style={{ color: theme.textSecondary }}>
           hours
+        </ThemedText>
+      </View>
+
+      <GestureDetector gesture={composedGesture}>
+        <Animated.View style={styles.sliderWrapper}>
+          <View style={[styles.sliderTrack, { backgroundColor: theme.backgroundTertiary }]}>
+            <Animated.View
+              style={[
+                styles.sliderFill,
+                { backgroundColor: colors.primary },
+                fillStyle,
+              ]}
+            />
+          </View>
+          <Animated.View
+            style={[
+              styles.sliderThumb,
+              {
+                backgroundColor: colors.primary,
+                borderColor: "#FFFFFF",
+              },
+              Shadows.md,
+              thumbStyle,
+            ]}
+          />
+        </Animated.View>
+      </GestureDetector>
+
+      <View style={styles.sliderMarkers}>
+        <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+          {min}h
+        </ThemedText>
+        {markers.filter(m => m > min && m < max).map((marker) => (
+          <ThemedText
+            key={marker}
+            type="caption"
+            style={{
+              color: value >= marker ? colors.primary : theme.textSecondary,
+              fontWeight: value >= marker ? "600" : "400",
+            }}
+          >
+            {marker}h
+          </ThemedText>
+        ))}
+        <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+          {max}h
         </ThemedText>
       </View>
     </View>
@@ -142,7 +238,8 @@ export default function StartFastModal() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<StartFastRouteProp>();
-  const { theme } = useTheme();
+  const { theme, colorScheme } = useTheme();
+  const colors = Colors[colorScheme];
   const { startFast, activeFast } = useFasting();
 
   const initialPlan = route.params?.plan || FASTING_PLANS[0];
@@ -158,16 +255,18 @@ export default function StartFastModal() {
       headerTitle: "Start a Fast",
       headerLeft: () => (
         <HeaderButton onPress={() => navigation.goBack()}>
-          <ThemedText type="body" style={{ color: theme.primary }}>
+          <ThemedText type="body" style={{ color: theme.textSecondary }}>
             Cancel
           </ThemedText>
         </HeaderButton>
       ),
       headerRight: () => (
         <HeaderButton onPress={handleStart}>
-          <ThemedText type="body" style={{ color: theme.primary, fontWeight: "600" }}>
-            Start
-          </ThemedText>
+          <View style={[styles.headerStartButton, { backgroundColor: colors.primary }]}>
+            <ThemedText type="small" style={{ color: "#FFFFFF", fontWeight: "600" }}>
+              Start
+            </ThemedText>
+          </View>
         </HeaderButton>
       ),
     });
@@ -175,11 +274,15 @@ export default function StartFastModal() {
 
   const handleStart = async () => {
     if (activeFast) {
-      Alert.alert(
-        "Active Fast",
-        "You already have an active fast. Please end it before starting a new one.",
-        [{ text: "OK" }]
-      );
+      if (Platform.OS === "web") {
+        window.alert("You already have an active fast. Please end it before starting a new one.");
+      } else {
+        Alert.alert(
+          "Active Fast",
+          "You already have an active fast. Please end it before starting a new one.",
+          [{ text: "OK" }]
+        );
+      }
       return;
     }
 
@@ -207,23 +310,38 @@ export default function StartFastModal() {
   const getDuration = () => isCustom ? customHours : (selectedPlan?.fastingHours || 16);
   const endTime = new Date(Date.now() + getDuration() * 60 * 60 * 1000);
 
+  const formatDuration = (hours: number) => {
+    if (hours >= 24) {
+      const days = Math.floor(hours / 24);
+      const remainingHours = hours % 24;
+      return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days} days`;
+    }
+    return `${hours} hours`;
+  };
+
   return (
     <KeyboardAwareScrollViewCompat
       style={{ flex: 1, backgroundColor: theme.backgroundRoot }}
       contentContainerStyle={{
         paddingTop: Spacing.xl,
-        paddingBottom: insets.bottom + Spacing.xl,
+        paddingBottom: insets.bottom + Spacing["3xl"],
         paddingHorizontal: Spacing.lg,
-        gap: Spacing.xl,
+        gap: Spacing["2xl"],
       }}
     >
       <View style={styles.section}>
-        <ThemedText type="h4">Choose Your Plan</ThemedText>
+        <View style={styles.sectionHeader}>
+          <ThemedText type="h3">Choose Your Plan</ThemedText>
+          <ThemedText type="small" style={{ color: theme.textSecondary }}>
+            Select a fasting schedule
+          </ThemedText>
+        </View>
         <View style={styles.planGrid}>
-          {FASTING_PLANS.slice(0, 4).map((plan) => (
+          {FASTING_PLANS.slice(0, 4).map((plan, index) => (
             <PlanButton
               key={plan.id}
               plan={plan}
+              index={index}
               selected={!isCustom && selectedPlan?.id === plan.id}
               onPress={() => handlePlanSelect(plan)}
             />
@@ -232,45 +350,52 @@ export default function StartFastModal() {
 
         <Pressable
           onPress={handleCustomSelect}
-          style={[
+          style={({ pressed }) => [
             styles.customButton,
             {
-              backgroundColor: isCustom ? theme.primary + "15" : theme.backgroundDefault,
-              borderWidth: isCustom ? 2 : 1,
-              borderColor: isCustom ? theme.primary : theme.backgroundTertiary,
+              backgroundColor: isCustom ? colors.primary + "15" : theme.backgroundSecondary,
+              borderWidth: isCustom ? 2 : 0,
+              borderColor: isCustom ? colors.primary : "transparent",
+              opacity: pressed ? 0.9 : 1,
             },
           ]}
         >
-          <Feather
-            name="sliders"
-            size={20}
-            color={isCustom ? theme.primary : theme.textSecondary}
-          />
+          <View style={[styles.customIconContainer, { backgroundColor: colors.secondary + "20" }]}>
+            <Feather
+              name="sliders"
+              size={20}
+              color={colors.secondary}
+            />
+          </View>
           <View style={styles.customButtonText}>
             <ThemedText
-              type="body"
+              type="h4"
               style={{
-                color: isCustom ? theme.primary : theme.text,
-                fontWeight: "600",
+                color: isCustom ? colors.primary : theme.text,
               }}
             >
               Custom Duration
             </ThemedText>
             <ThemedText type="small" style={{ color: theme.textSecondary }}>
-              Set your own fasting hours
+              Set anywhere from 8 to 96 hours
             </ThemedText>
           </View>
-          <Feather
-            name={isCustom ? "check-circle" : "circle"}
-            size={20}
-            color={isCustom ? theme.primary : theme.textSecondary}
-          />
+          <View style={[
+            styles.radioOuter,
+            {
+              borderColor: isCustom ? colors.primary : theme.textTertiary,
+              backgroundColor: isCustom ? colors.primary : "transparent",
+            },
+          ]}>
+            {isCustom ? (
+              <View style={styles.radioInner} />
+            ) : null}
+          </View>
         </Pressable>
       </View>
 
       {isCustom ? (
         <View style={[styles.customSection, { backgroundColor: theme.backgroundDefault }]}>
-          <ThemedText type="h4">Set Duration</ThemedText>
           <DurationSlider
             value={customHours}
             onChange={setCustomHours}
@@ -280,48 +405,56 @@ export default function StartFastModal() {
         </View>
       ) : selectedPlan ? (
         <View style={[styles.planPreview, { backgroundColor: theme.backgroundDefault }]}>
-          <View style={styles.planPreviewHeader}>
-            <View>
-              <ThemedText type="h3" style={{ color: theme.primary }}>
-                {selectedPlan.name}
-              </ThemedText>
-              <ThemedText type="small" style={{ color: theme.textSecondary }}>
+          <View style={styles.planPreviewTop}>
+            <View style={[styles.planPreviewBadge, { backgroundColor: colors.primary + "15" }]}>
+              <ThemedText type="caption" style={{ color: colors.primary, textTransform: "uppercase" }}>
                 {selectedPlan.difficulty}
               </ThemedText>
             </View>
-            <View style={styles.durationBadges}>
-              <View style={[styles.badge, { backgroundColor: theme.primary + "15" }]}>
-                <Feather name="moon" size={14} color={theme.primary} />
-                <ThemedText type="small" style={{ color: theme.primary, fontWeight: "600" }}>
+          </View>
+          <ThemedText type="h2" style={{ color: theme.text }}>
+            {selectedPlan.name}
+          </ThemedText>
+          <ThemedText type="body" style={{ color: theme.textSecondary, lineHeight: 24 }}>
+            {selectedPlan.description}
+          </ThemedText>
+          <View style={styles.planStats}>
+            <View style={[styles.planStat, { backgroundColor: colors.primary + "10" }]}>
+              <Feather name="moon" size={18} color={colors.primary} />
+              <View>
+                <ThemedText type="h4" style={{ color: colors.primary }}>
                   {selectedPlan.fastingHours}h
                 </ThemedText>
+                <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                  Fasting
+                </ThemedText>
               </View>
-              <View style={[styles.badge, { backgroundColor: Colors.light.success + "15" }]}>
-                <Feather name="sun" size={14} color={Colors.light.success} />
-                <ThemedText type="small" style={{ color: Colors.light.success, fontWeight: "600" }}>
+            </View>
+            <View style={[styles.planStat, { backgroundColor: colors.success + "10" }]}>
+              <Feather name="sun" size={18} color={colors.success} />
+              <View>
+                <ThemedText type="h4" style={{ color: colors.success }}>
                   {selectedPlan.eatingHours}h
+                </ThemedText>
+                <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                  Eating
                 </ThemedText>
               </View>
             </View>
           </View>
-          <ThemedText type="body" style={{ color: theme.textSecondary }}>
-            {selectedPlan.description}
-          </ThemedText>
         </View>
       ) : null}
 
       <View style={[styles.scheduleCard, { backgroundColor: theme.backgroundDefault }]}>
-        <ThemedText type="h4">Your Schedule</ThemedText>
-        <View style={styles.scheduleRow}>
-          <View style={styles.scheduleItem}>
-            <View style={[styles.scheduleIcon, { backgroundColor: Colors.light.success + "15" }]}>
-              <Feather name="play" size={16} color={Colors.light.success} />
-            </View>
-            <View>
-              <ThemedText type="small" style={{ color: theme.textSecondary }}>
+        <ThemedText type="h4" style={{ marginBottom: Spacing.md }}>Your Schedule</ThemedText>
+        <View style={styles.scheduleTimeline}>
+          <View style={styles.scheduleTimeItem}>
+            <View style={[styles.timelineDot, { backgroundColor: colors.success }]} />
+            <View style={styles.timelineContent}>
+              <ThemedText type="caption" style={{ color: theme.textSecondary, textTransform: "uppercase" }}>
                 Start Now
               </ThemedText>
-              <ThemedText type="body" style={{ fontWeight: "600" }}>
+              <ThemedText type="h3">
                 {new Date().toLocaleTimeString("en-US", {
                   hour: "numeric",
                   minute: "2-digit",
@@ -330,51 +463,55 @@ export default function StartFastModal() {
               </ThemedText>
             </View>
           </View>
-          <View style={[styles.scheduleArrow, { backgroundColor: theme.backgroundSecondary }]}>
-            <Feather name="arrow-right" size={16} color={theme.textSecondary} />
-          </View>
-          <View style={styles.scheduleItem}>
-            <View style={[styles.scheduleIcon, { backgroundColor: theme.primary + "15" }]}>
-              <Feather name="flag" size={16} color={theme.primary} />
+          
+          <View style={[styles.timelineLine, { backgroundColor: theme.backgroundTertiary }]}>
+            <View style={[styles.durationPill, { backgroundColor: colors.primary + "15" }]}>
+              <ThemedText type="small" style={{ color: colors.primary, fontWeight: "600" }}>
+                {formatDuration(getDuration())}
+              </ThemedText>
             </View>
-            <View>
-              <ThemedText type="small" style={{ color: theme.textSecondary }}>
+          </View>
+          
+          <View style={styles.scheduleTimeItem}>
+            <View style={[styles.timelineDot, { backgroundColor: colors.primary }]} />
+            <View style={styles.timelineContent}>
+              <ThemedText type="caption" style={{ color: theme.textSecondary, textTransform: "uppercase" }}>
                 Goal
               </ThemedText>
-              <ThemedText type="body" style={{ fontWeight: "600" }}>
+              <ThemedText type="h3">
                 {endTime.toLocaleTimeString("en-US", {
                   hour: "numeric",
                   minute: "2-digit",
                   hour12: true,
                 })}
               </ThemedText>
+              <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                {endTime.toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </ThemedText>
             </View>
           </View>
-        </View>
-        <View style={styles.totalDuration}>
-          <ThemedText type="h2" style={{ color: theme.primary }}>
-            {getDuration()}
-          </ThemedText>
-          <ThemedText type="body" style={{ color: theme.textSecondary }}>
-            hours total
-          </ThemedText>
         </View>
       </View>
 
       <View style={styles.section}>
-        <ThemedText type="h4">Add a Note (Optional)</ThemedText>
+        <ThemedText type="h4">Add a Note</ThemedText>
         <TextInput
           value={note}
           onChangeText={setNote}
           placeholder="How are you feeling? Any goals for this fast?"
-          placeholderTextColor={theme.textSecondary}
+          placeholderTextColor={theme.textTertiary}
           multiline
           numberOfLines={3}
           style={[
             styles.noteInput,
             {
               color: theme.text,
-              backgroundColor: theme.backgroundDefault,
+              backgroundColor: theme.backgroundSecondary,
+              borderColor: theme.backgroundTertiary,
             },
           ]}
         />
@@ -384,12 +521,16 @@ export default function StartFastModal() {
         onPress={handleStart}
         style={({ pressed }) => [
           styles.startButton,
-          { backgroundColor: theme.primary, opacity: pressed ? 0.9 : 1 },
+          { 
+            backgroundColor: colors.primary, 
+            opacity: pressed ? 0.9 : 1,
+          },
+          Shadows.lg,
         ]}
       >
         <Feather name="play" size={20} color="#FFFFFF" />
-        <ThemedText type="body" style={{ color: "#FFFFFF", fontWeight: "600" }}>
-          Start Fast Now
+        <ThemedText type="h4" style={{ color: "#FFFFFF" }}>
+          Begin Fast
         </ThemedText>
       </Pressable>
     </KeyboardAwareScrollViewCompat>
@@ -400,132 +541,181 @@ const styles = StyleSheet.create({
   section: {
     gap: Spacing.md,
   },
+  sectionHeader: {
+    gap: Spacing.xs,
+  },
   planGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: Spacing.sm,
+    gap: Spacing.md,
   },
   planButton: {
-    width: "48%",
-    alignItems: "center",
+    width: (SCREEN_WIDTH - Spacing.lg * 2 - Spacing.md) / 2,
+    alignItems: "flex-start",
     justifyContent: "center",
     padding: Spacing.lg,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.lg,
     gap: Spacing.xs,
+  },
+  planIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.sm,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.xs,
+  },
+  planIconDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
   customButton: {
     flexDirection: "row",
     alignItems: "center",
     padding: Spacing.lg,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.lg,
     gap: Spacing.md,
+  },
+  customIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.md,
+    alignItems: "center",
+    justifyContent: "center",
   },
   customButtonText: {
     flex: 1,
     gap: 2,
   },
+  radioOuter: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  radioInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#FFFFFF",
+  },
   customSection: {
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.xl,
     gap: Spacing.lg,
   },
   sliderContainer: {
-    gap: Spacing.md,
+    gap: Spacing.xl,
   },
-  sliderLabels: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  sliderValueContainer: {
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  sliderWrapper: {
+    height: 40,
+    justifyContent: "center",
   },
   sliderTrack: {
-    height: 8,
-    borderRadius: 4,
+    height: 6,
+    borderRadius: 3,
     position: "relative",
   },
   sliderFill: {
     height: "100%",
-    borderRadius: 4,
+    borderRadius: 3,
   },
   sliderThumb: {
     position: "absolute",
-    top: -8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    marginLeft: -12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
+    width: THUMB_SIZE,
+    height: THUMB_SIZE,
+    borderRadius: THUMB_SIZE / 2,
+    borderWidth: 3,
+    top: (40 - THUMB_SIZE) / 2,
   },
-  sliderValue: {
-    alignItems: "center",
-    gap: Spacing.xs,
-  },
-  planPreview: {
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    gap: Spacing.md,
-  },
-  planPreviewHeader: {
+  sliderMarkers: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    paddingHorizontal: Spacing.xs,
   },
-  durationBadges: {
-    flexDirection: "row",
-    gap: Spacing.sm,
+  planPreview: {
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.xl,
+    gap: Spacing.md,
   },
-  badge: {
+  planPreviewTop: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.xs,
+    justifyContent: "flex-start",
+  },
+  planPreviewBadge: {
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
     borderRadius: BorderRadius.xs,
   },
-  scheduleCard: {
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    gap: Spacing.lg,
-  },
-  scheduleRow: {
+  planStats: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    gap: Spacing.md,
+    marginTop: Spacing.sm,
   },
-  scheduleItem: {
+  planStat: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
   },
-  scheduleIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.sm,
-    alignItems: "center",
-    justifyContent: "center",
+  scheduleCard: {
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.xl,
   },
-  scheduleArrow: {
-    width: 32,
-    height: 32,
-    borderRadius: BorderRadius.full,
-    alignItems: "center",
-    justifyContent: "center",
+  scheduleTimeline: {
+    gap: 0,
   },
-  totalDuration: {
+  scheduleTimeItem: {
     flexDirection: "row",
-    alignItems: "baseline",
+    alignItems: "flex-start",
+    gap: Spacing.md,
+  },
+  timelineDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginTop: 6,
+  },
+  timelineContent: {
+    flex: 1,
+    gap: 2,
+  },
+  timelineLine: {
+    width: 2,
+    height: 40,
+    marginLeft: 5,
+    marginVertical: Spacing.sm,
+    alignItems: "center",
     justifyContent: "center",
-    gap: Spacing.sm,
+  },
+  durationPill: {
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.full,
+    marginLeft: Spacing.xl,
+  },
+  headerStartButton: {
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.full,
   },
   noteInput: {
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.lg,
     paddingHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.lg,
     fontSize: 16,
     textAlignVertical: "top",
     minHeight: 100,
+    borderWidth: 1,
   },
   startButton: {
     flexDirection: "row",
@@ -533,7 +723,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: Spacing.sm,
     paddingVertical: Spacing.lg,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.lg,
     marginTop: Spacing.md,
   },
 });

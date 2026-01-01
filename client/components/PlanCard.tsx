@@ -22,9 +22,9 @@ interface PlanCardProps {
 }
 
 const springConfig: WithSpringConfig = {
-  damping: 15,
+  damping: 12,
   mass: 0.3,
-  stiffness: 150,
+  stiffness: 180,
 };
 
 const difficultyColors = {
@@ -45,7 +45,8 @@ export function PlanCard({
   onPress,
   onStartPress,
 }: PlanCardProps) {
-  const { theme } = useTheme();
+  const { theme, colorScheme } = useTheme();
+  const colors = Colors[colorScheme];
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -53,7 +54,7 @@ export function PlanCard({
   }));
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.98, springConfig);
+    scale.value = withSpring(0.97, springConfig);
   };
 
   const handlePressOut = () => {
@@ -71,62 +72,77 @@ export function PlanCard({
         animatedStyle,
       ]}
     >
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <ThemedText type="h4">{name}</ThemedText>
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <View style={styles.titleSection}>
+            <View style={styles.titleRow}>
+              <ThemedText type="h3">{name}</ThemedText>
+            </View>
+            <View style={styles.timeBadges}>
+              <View style={[styles.timeBadge, { backgroundColor: colors.primary + "12" }]}>
+                <Feather name="moon" size={14} color={colors.primary} />
+                <ThemedText type="small" style={{ color: colors.primary, fontWeight: "600" }}>
+                  {fastingHours}h fast
+                </ThemedText>
+              </View>
+              <View style={[styles.timeBadge, { backgroundColor: colors.success + "12" }]}>
+                <Feather name="sun" size={14} color={colors.success} />
+                <ThemedText type="small" style={{ color: colors.success, fontWeight: "600" }}>
+                  {eatingHours}h eat
+                </ThemedText>
+              </View>
+            </View>
+          </View>
           <View
             style={[
-              styles.badge,
-              { backgroundColor: difficultyColors[difficulty] + "20" },
+              styles.difficultyBadge,
+              { backgroundColor: difficultyColors[difficulty] + "15" },
             ]}
           >
             <ThemedText
-              type="small"
+              type="caption"
               style={{ color: difficultyColors[difficulty], fontWeight: "600" }}
             >
               {difficulty}
             </ThemedText>
           </View>
         </View>
+
         <ThemedText
           type="body"
-          style={{ color: theme.primary, fontWeight: "600" }}
+          style={{ color: theme.textSecondary, lineHeight: 22 }}
+          numberOfLines={2}
         >
-          {fastingHours}:{eatingHours}
+          {description}
         </ThemedText>
+
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation();
+            onStartPress();
+          }}
+          style={({ pressed }) => [
+            styles.startButton,
+            { backgroundColor: colors.primary, opacity: pressed ? 0.9 : 1 },
+          ]}
+        >
+          <Feather name="play" size={18} color="#FFFFFF" />
+          <ThemedText type="bodyMedium" style={styles.startButtonText}>
+            Start This Plan
+          </ThemedText>
+        </Pressable>
       </View>
-
-      <ThemedText
-        type="small"
-        style={{ color: theme.textSecondary }}
-        numberOfLines={2}
-      >
-        {description}
-      </ThemedText>
-
-      <Pressable
-        onPress={(e) => {
-          e.stopPropagation();
-          onStartPress();
-        }}
-        style={({ pressed }) => [
-          styles.startButton,
-          { backgroundColor: theme.primary, opacity: pressed ? 0.8 : 1 },
-        ]}
-      >
-        <Feather name="play" size={16} color="#FFFFFF" />
-        <ThemedText type="body" style={styles.startButtonText}>
-          Start
-        </ThemedText>
-      </Pressable>
     </AnimatedPressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.xl,
+    overflow: "hidden",
+  },
+  content: {
+    padding: Spacing.xl,
     gap: Spacing.md,
   },
   header: {
@@ -134,27 +150,43 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
   },
+  titleSection: {
+    flex: 1,
+    gap: Spacing.sm,
+  },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.sm,
-    flex: 1,
   },
-  badge: {
+  timeBadges: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+    flexWrap: "wrap",
+  },
+  timeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.xs,
+  },
+  difficultyBadge: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
   },
   startButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.sm,
-    gap: Spacing.xs,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
+    marginTop: Spacing.xs,
   },
   startButtonText: {
     color: "#FFFFFF",
-    fontWeight: "600",
   },
 });

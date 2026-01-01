@@ -1,17 +1,21 @@
 import React from "react";
 import { View, StyleSheet, Pressable } from "react-native";
-import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
+import Svg, { Circle, Defs, LinearGradient, Stop, G } from "react-native-svg";
 import Animated, {
   useAnimatedProps,
   withTiming,
   Easing,
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
 } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
-import { Colors } from "@/constants/theme";
+import { Colors, Shadows, BorderRadius } from "@/constants/theme";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export interface Milestone {
   hours: number;
@@ -32,6 +36,48 @@ export const RING_MILESTONES: Milestone[] = [
   { hours: 72, icon: "shield", color: Colors.light.success, name: "Immune Reset", description: "Immune system regeneration begins" },
 ];
 
+interface MilestoneIconProps {
+  milestone: Milestone;
+  isPassed: boolean;
+  x: number;
+  y: number;
+  onPress: () => void;
+}
+
+function MilestoneIcon({ milestone, isPassed, x, y, onPress }: MilestoneIconProps) {
+  const { theme, colorScheme } = useTheme();
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={() => { scale.value = withSpring(0.85); }}
+      onPressOut={() => { scale.value = withSpring(1); }}
+      style={[
+        styles.milestone,
+        {
+          left: x - 16,
+          top: y - 16,
+          backgroundColor: isPassed ? milestone.color + "20" : theme.backgroundSecondary,
+          borderColor: isPassed ? milestone.color : theme.backgroundTertiary,
+        },
+        animatedStyle,
+      ]}
+      hitSlop={8}
+    >
+      <Feather
+        name={milestone.icon as any}
+        size={16}
+        color={isPassed ? milestone.color : theme.textTertiary}
+      />
+    </AnimatedPressable>
+  );
+}
+
 interface ProgressRingProps {
   progress: number;
   size?: number;
@@ -46,24 +92,25 @@ interface ProgressRingProps {
 export function ProgressRing({
   progress,
   size = 280,
-  strokeWidth = 20,
+  strokeWidth = 18,
   children,
   targetHours = 16,
   elapsedHours = 0,
   showMilestones = false,
   onMilestonePress,
 }: ProgressRingProps) {
-  const { theme, isDark } = useTheme();
+  const { theme, isDark, colorScheme } = useTheme();
+  const colors = Colors[colorScheme];
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const milestoneRadius = radius + strokeWidth / 2 + 26;
+  const milestoneRadius = radius + strokeWidth / 2 + 28;
 
   const animatedProps = useAnimatedProps(() => {
     const clampedProgress = Math.min(Math.max(progress, 0), 1);
     return {
       strokeDashoffset: withTiming(
         circumference - clampedProgress * circumference,
-        { duration: 500, easing: Easing.out(Easing.quad) }
+        { duration: 800, easing: Easing.out(Easing.cubic) }
       ),
     };
   }, [progress, circumference]);
@@ -73,8 +120,8 @@ export function ProgressRing({
     const progressFraction = Math.min(hours / maxHours, 1);
     const angle = progressFraction * 360 - 90;
     const radian = (angle * Math.PI) / 180;
-    const centerX = size / 2 + 30;
-    const centerY = size / 2 + 30;
+    const centerX = size / 2 + 32;
+    const centerY = size / 2 + 32;
     return {
       x: centerX + milestoneRadius * Math.cos(radian),
       y: centerY + milestoneRadius * Math.sin(radian),
@@ -91,22 +138,39 @@ export function ProgressRing({
   };
 
   return (
-    <View style={[styles.container, { width: size + 60, height: size + 60 }]}>
+    <View style={[styles.container, { width: size + 64, height: size + 64 }]}>
       <View style={[styles.ringContainer, { width: size, height: size }]}>
+        <View
+          style={[
+            styles.innerGlow,
+            {
+              width: size - strokeWidth * 2 - 20,
+              height: size - strokeWidth * 2 - 20,
+              borderRadius: (size - strokeWidth * 2 - 20) / 2,
+              backgroundColor: isDark ? colors.primary + "08" : colors.primary + "05",
+            },
+          ]}
+        />
         <Svg width={size} height={size} style={styles.svg}>
           <Defs>
             <LinearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <Stop offset="0%" stopColor={Colors.light.primary} />
-              <Stop offset="100%" stopColor={Colors.light.secondary} />
+              <Stop offset="0%" stopColor={colors.gradientStart} />
+              <Stop offset="50%" stopColor={colors.gradientMiddle} />
+              <Stop offset="100%" stopColor={colors.gradientEnd} />
+            </LinearGradient>
+            <LinearGradient id="trackGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <Stop offset="0%" stopColor={isDark ? colors.backgroundSecondary : "#E5E7EB"} />
+              <Stop offset="100%" stopColor={isDark ? colors.backgroundTertiary : "#D1D5DB"} />
             </LinearGradient>
           </Defs>
           <Circle
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke={isDark ? Colors.dark.backgroundSecondary : "#E5E7EB"}
+            stroke="url(#trackGradient)"
             strokeWidth={strokeWidth}
             fill="none"
+            opacity={0.5}
           />
           <AnimatedCircle
             cx={size / 2}
@@ -129,24 +193,14 @@ export function ProgressRing({
         const isPassed = elapsedHours >= milestone.hours;
 
         return (
-          <Pressable
+          <MilestoneIcon
             key={milestone.hours}
+            milestone={milestone}
+            isPassed={isPassed}
+            x={pos.x}
+            y={pos.y}
             onPress={() => handleMilestonePress(milestone)}
-            style={[
-              styles.milestone,
-              {
-                left: pos.x - 14,
-                top: pos.y - 14,
-              },
-            ]}
-            hitSlop={8}
-          >
-            <Feather
-              name={milestone.icon as any}
-              size={20}
-              color={isPassed ? milestone.color : "#9CA3AF"}
-            />
-          </Pressable>
+          />
         );
       })}
     </View>
@@ -161,10 +215,13 @@ const styles = StyleSheet.create({
   },
   ringContainer: {
     position: "absolute",
-    top: 30,
-    left: 30,
+    top: 32,
+    left: 32,
     alignItems: "center",
     justifyContent: "center",
+  },
+  innerGlow: {
+    position: "absolute",
   },
   svg: {
     position: "absolute",
@@ -175,9 +232,11 @@ const styles = StyleSheet.create({
   },
   milestone: {
     position: "absolute",
-    width: 28,
-    height: 28,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1.5,
   },
 });

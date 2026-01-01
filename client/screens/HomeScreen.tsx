@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, StyleSheet, Alert, Pressable, Platform, ScrollView } from "react-native";
+import { View, StyleSheet, Alert, Pressable, Platform, ScrollView, Dimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
@@ -12,6 +12,7 @@ import Animated, {
   withSequence,
   Easing,
   withTiming,
+  withSpring,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 
@@ -21,10 +22,14 @@ import { FastingStageIndicator } from "@/components/FastingStage";
 import { FAB } from "@/components/FAB";
 import { useTheme } from "@/hooks/useTheme";
 import { useFasting } from "@/hooks/useFasting";
-import { Spacing, Colors, BorderRadius } from "@/constants/theme";
+import { Spacing, Colors, BorderRadius, Shadows } from "@/constants/theme";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 function formatTime(ms: number): { hours: string; minutes: string; seconds: string } {
   const totalSeconds = Math.floor(ms / 1000);
@@ -51,6 +56,11 @@ function formatRemainingTime(ms: number): string {
   const totalMinutes = Math.max(0, Math.floor(ms / (1000 * 60)));
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+    return `${days}d ${remainingHours}h ${minutes}m`;
+  }
   if (hours > 0) {
     return `${hours}h ${minutes}m left`;
   }
@@ -77,11 +87,50 @@ function formatHours(hours: number): string {
   return `${roundedHours}h`;
 }
 
+interface StatCardProps {
+  icon: string;
+  iconColor: string;
+  value: string;
+  label: string;
+  theme: any;
+}
+
+function StatCard({ icon, iconColor, value, label, theme }: StatCardProps) {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <AnimatedPressable
+      onPressIn={() => { scale.value = withSpring(0.97); }}
+      onPressOut={() => { scale.value = withSpring(1); }}
+      style={[
+        styles.statCard,
+        { backgroundColor: theme.backgroundDefault },
+        animatedStyle,
+      ]}
+    >
+      <View style={[styles.statIconContainer, { backgroundColor: iconColor + "15" }]}>
+        <Feather name={icon as any} size={20} color={iconColor} />
+      </View>
+      <ThemedText type="h2" style={{ color: theme.text }}>
+        {value}
+      </ThemedText>
+      <ThemedText type="small" style={{ color: theme.textSecondary }}>
+        {label}
+      </ThemedText>
+    </AnimatedPressable>
+  );
+}
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
   const navigation = useNavigation<NavigationProp>();
-  const { theme } = useTheme();
+  const { theme, colorScheme } = useTheme();
+  const colors = Colors[colorScheme];
   const { activeFast, endFast, stats, refresh } = useFasting();
   const [elapsed, setElapsed] = useState(0);
 
@@ -97,8 +146,8 @@ export default function HomeScreen() {
     if (activeFast) {
       pulseAnim.value = withRepeat(
         withSequence(
-          withTiming(1.015, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
-          withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.ease) })
+          withTiming(1.02, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) })
         ),
         -1,
         true
@@ -183,7 +232,7 @@ export default function HomeScreen() {
         styles.container,
         {
           backgroundColor: theme.backgroundRoot,
-          paddingTop: insets.top + Spacing.md,
+          paddingTop: insets.top + Spacing.lg,
         },
       ]}
     >
@@ -192,21 +241,23 @@ export default function HomeScreen() {
           <ThemedText type="small" style={{ color: theme.textSecondary }}>
             {getGreeting()}
           </ThemedText>
-          <ThemedText type="h3">FastTrack</ThemedText>
+          <ThemedText type="h2">FastTrack</ThemedText>
         </View>
-        <View style={[styles.streakBadge, { backgroundColor: theme.backgroundDefault }]}>
-          <Feather name="zap" size={14} color={Colors.light.primary} />
-          <ThemedText type="small" style={{ color: theme.text, fontWeight: "600" }}>
-            {formatHours(stats.currentStreak * 24)}
-          </ThemedText>
-        </View>
+        {stats.currentStreak > 0 ? (
+          <View style={[styles.streakBadge, { backgroundColor: colors.primary + "15" }]}>
+            <Feather name="zap" size={16} color={colors.primary} />
+            <ThemedText type="bodyMedium" style={{ color: colors.primary }}>
+              {stats.currentStreak} day streak
+            </ThemedText>
+          </View>
+        ) : null}
       </View>
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: tabBarHeight + 100 },
+          { paddingBottom: tabBarHeight + 120 },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -214,8 +265,8 @@ export default function HomeScreen() {
           <Animated.View style={[styles.timerWrapper, pulseStyle]}>
             <ProgressRing
               progress={progress}
-              size={240}
-              strokeWidth={14}
+              size={260}
+              strokeWidth={16}
               targetHours={activeFast?.targetDuration || 16}
               elapsedHours={elapsedHours}
               showMilestones={!!activeFast}
@@ -237,8 +288,8 @@ export default function HomeScreen() {
               <View style={styles.timerContent}>
                 {activeFast ? (
                   <>
-                    <View style={[styles.planBadge, { backgroundColor: theme.primary + "15" }]}>
-                      <ThemedText type="small" style={{ color: theme.primary, fontWeight: "600" }}>
+                    <View style={[styles.planBadge, { backgroundColor: colors.primary + "15" }]}>
+                      <ThemedText type="small" style={{ color: colors.primary, fontWeight: "600" }}>
                         {activeFast.planName}
                       </ThemedText>
                     </View>
@@ -255,12 +306,17 @@ export default function HomeScreen() {
                     </ThemedText>
                   </>
                 ) : (
-                  <>
-                    <Feather name="clock" size={32} color={theme.textSecondary} />
-                    <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.sm }}>
+                  <View style={styles.emptyStateContent}>
+                    <View style={[styles.emptyIcon, { backgroundColor: theme.backgroundSecondary }]}>
+                      <Feather name="clock" size={36} color={theme.textTertiary} />
+                    </View>
+                    <ThemedText type="h4" style={{ color: theme.textSecondary }}>
                       Ready to fast?
                     </ThemedText>
-                  </>
+                    <ThemedText type="small" style={{ color: theme.textTertiary, textAlign: "center" }}>
+                      Tap the button below to start
+                    </ThemedText>
+                  </View>
                 )}
               </View>
             </ProgressRing>
@@ -277,16 +333,21 @@ export default function HomeScreen() {
             </Pressable>
 
             <View style={[styles.infoCard, { backgroundColor: theme.backgroundDefault }]}>
+              <View style={styles.infoHeader}>
+                <ThemedText type="h4">Fast Details</ThemedText>
+                <ThemedText type="caption" style={{ color: colors.primary }}>
+                  {Math.round(progress * 100)}% complete
+                </ThemedText>
+              </View>
+              <View style={styles.infoDivider} />
               <View style={styles.infoRow}>
                 <View style={styles.infoItem}>
-                  <View style={[styles.infoIcon, { backgroundColor: Colors.light.success + "15" }]}>
-                    <Feather name="play" size={14} color={Colors.light.success} />
-                  </View>
+                  <Feather name="play-circle" size={20} color={colors.success} />
                   <View>
-                    <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                    <ThemedText type="caption" style={{ color: theme.textSecondary }}>
                       Started
                     </ThemedText>
-                    <ThemedText type="body" style={{ fontWeight: "600" }}>
+                    <ThemedText type="bodyMedium">
                       {new Date(activeFast.startTime).toLocaleTimeString("en-US", {
                         hour: "numeric",
                         minute: "2-digit",
@@ -296,28 +357,13 @@ export default function HomeScreen() {
                   </View>
                 </View>
                 <View style={styles.infoItem}>
-                  <View style={[styles.infoIcon, { backgroundColor: theme.primary + "15" }]}>
-                    <Feather name="flag" size={14} color={theme.primary} />
-                  </View>
+                  <Feather name="target" size={20} color={colors.primary} />
                   <View>
-                    <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                    <ThemedText type="caption" style={{ color: theme.textSecondary }}>
                       Goal
                     </ThemedText>
-                    <ThemedText type="body" style={{ fontWeight: "600" }}>
+                    <ThemedText type="bodyMedium">
                       {formatTargetTime(activeFast.startTime, activeFast.targetDuration)}
-                    </ThemedText>
-                  </View>
-                </View>
-                <View style={styles.infoItem}>
-                  <View style={[styles.infoIcon, { backgroundColor: Colors.light.secondary + "15" }]}>
-                    <Feather name="percent" size={14} color={Colors.light.secondary} />
-                  </View>
-                  <View>
-                    <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                      Progress
-                    </ThemedText>
-                    <ThemedText type="body" style={{ fontWeight: "600" }}>
-                      {Math.round(progress * 100)}%
                     </ThemedText>
                   </View>
                 </View>
@@ -329,13 +375,13 @@ export default function HomeScreen() {
               style={({ pressed }) => [
                 styles.endButton,
                 {
-                  backgroundColor: Colors.light.destructive,
+                  backgroundColor: colors.destructive + "15",
                   opacity: pressed ? 0.9 : 1,
                 },
               ]}
             >
-              <Feather name="stop-circle" size={18} color="#FFFFFF" />
-              <ThemedText type="body" style={{ color: "#FFFFFF", fontWeight: "600" }}>
+              <Feather name="stop-circle" size={20} color={colors.destructive} />
+              <ThemedText type="bodyMedium" style={{ color: colors.destructive }}>
                 End Fast
               </ThemedText>
             </Pressable>
@@ -343,45 +389,37 @@ export default function HomeScreen() {
         ) : (
           <>
             <View style={styles.statsGrid}>
-              <View style={[styles.statCard, { backgroundColor: theme.backgroundDefault }]}>
-                <View style={[styles.statIcon, { backgroundColor: Colors.light.primary + "15" }]}>
-                  <Feather name="zap" size={20} color={Colors.light.primary} />
-                </View>
-                <ThemedText type="h3">{formatHours(stats.currentStreak * 24)}</ThemedText>
-                <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                  Current Streak
-                </ThemedText>
-              </View>
-              <View style={[styles.statCard, { backgroundColor: theme.backgroundDefault }]}>
-                <View style={[styles.statIcon, { backgroundColor: Colors.light.secondary + "15" }]}>
-                  <Feather name="award" size={20} color={Colors.light.secondary} />
-                </View>
-                <ThemedText type="h3">{formatHours(stats.longestStreak * 24)}</ThemedText>
-                <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                  Best Streak
-                </ThemedText>
-              </View>
+              <StatCard
+                icon="zap"
+                iconColor={colors.primary}
+                value={`${stats.currentStreak}`}
+                label="Day Streak"
+                theme={theme}
+              />
+              <StatCard
+                icon="award"
+                iconColor={colors.secondary}
+                value={`${stats.longestStreak}`}
+                label="Best Streak"
+                theme={theme}
+              />
             </View>
 
             <View style={styles.statsGrid}>
-              <View style={[styles.statCard, { backgroundColor: theme.backgroundDefault }]}>
-                <View style={[styles.statIcon, { backgroundColor: Colors.light.success + "15" }]}>
-                  <Feather name="check-circle" size={20} color={Colors.light.success} />
-                </View>
-                <ThemedText type="h3">{stats.totalFasts}</ThemedText>
-                <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                  Fasts Completed
-                </ThemedText>
-              </View>
-              <View style={[styles.statCard, { backgroundColor: theme.backgroundDefault }]}>
-                <View style={[styles.statIcon, { backgroundColor: "#F59E0B15" }]}>
-                  <Feather name="clock" size={20} color="#F59E0B" />
-                </View>
-                <ThemedText type="h3">{formatHours(stats.totalHours)}</ThemedText>
-                <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                  Time Fasted
-                </ThemedText>
-              </View>
+              <StatCard
+                icon="check-circle"
+                iconColor={colors.success}
+                value={`${stats.totalFasts}`}
+                label="Fasts Done"
+                theme={theme}
+              />
+              <StatCard
+                icon="clock"
+                iconColor="#F59E0B"
+                value={formatHours(stats.totalHours)}
+                label="Time Fasted"
+                theme={theme}
+              />
             </View>
 
             <Pressable
@@ -390,29 +428,27 @@ export default function HomeScreen() {
                 styles.learnButton,
                 {
                   backgroundColor: theme.backgroundDefault,
-                  opacity: pressed ? 0.8 : 1,
+                  opacity: pressed ? 0.9 : 1,
                 },
               ]}
             >
-              <View style={[styles.learnIcon, { backgroundColor: Colors.light.secondary + "15" }]}>
-                <Feather name="book-open" size={20} color={Colors.light.secondary} />
+              <View style={[styles.learnIconContainer, { backgroundColor: colors.secondary + "15" }]}>
+                <Feather name="book-open" size={22} color={colors.secondary} />
               </View>
               <View style={styles.learnContent}>
-                <ThemedText type="body" style={{ fontWeight: "600" }}>
-                  Learn About Fasting Stages
-                </ThemedText>
+                <ThemedText type="h4">Learn About Fasting</ThemedText>
                 <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                  Understand what happens to your body during fasting
+                  Discover what happens to your body during each stage
                 </ThemedText>
               </View>
-              <Feather name="chevron-right" size={20} color={theme.textSecondary} />
+              <Feather name="chevron-right" size={22} color={theme.textTertiary} />
             </Pressable>
           </>
         )}
       </ScrollView>
 
       {!activeFast ? (
-        <View style={[styles.fabContainer, { bottom: tabBarHeight + Spacing.xl }]}>
+        <View style={[styles.fabContainer, { bottom: tabBarHeight + Spacing["2xl"] }]}>
           <FAB onPress={handleStartFast} icon="play" />
         </View>
       ) : null}
@@ -428,8 +464,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing.md,
   },
   streakBadge: {
     flexDirection: "row",
@@ -443,12 +479,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
     gap: Spacing.lg,
   },
   timerSection: {
     alignItems: "center",
-    paddingVertical: Spacing.lg,
+    paddingVertical: Spacing.md,
   },
   timerWrapper: {
     alignItems: "center",
@@ -456,47 +492,64 @@ const styles = StyleSheet.create({
   },
   timerContent: {
     alignItems: "center",
-    gap: Spacing.xs,
+    gap: Spacing.sm,
+  },
+  emptyStateContent: {
+    alignItems: "center",
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
+  },
+  emptyIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.xs,
   },
   planBadge: {
-    paddingVertical: 4,
+    paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.full,
-    marginBottom: 4,
   },
   timerDisplay: {
     flexDirection: "row",
     alignItems: "baseline",
   },
   timerText: {
-    fontSize: 44,
+    fontSize: 52,
     fontWeight: "700",
     fontVariant: ["tabular-nums"],
+    letterSpacing: -2,
   },
   timerSeconds: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "600",
     fontVariant: ["tabular-nums"],
   },
   infoCard: {
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.lg,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    gap: Spacing.md,
+  },
+  infoHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  infoDivider: {
+    height: 1,
+    backgroundColor: "rgba(0,0,0,0.05)",
+    marginVertical: Spacing.xs,
   },
   infoRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "space-around",
   },
   infoItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: Spacing.sm,
-  },
-  infoIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: BorderRadius.sm,
-    alignItems: "center",
-    justifyContent: "center",
+    gap: Spacing.md,
   },
   statsGrid: {
     flexDirection: "row",
@@ -505,13 +558,14 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     alignItems: "center",
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.xl,
     gap: Spacing.sm,
   },
-  statIcon: {
-    width: 44,
-    height: 44,
+  statIconContainer: {
+    width: 48,
+    height: 48,
     borderRadius: BorderRadius.md,
     alignItems: "center",
     justifyContent: "center",
@@ -521,8 +575,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: Spacing.sm,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.lg,
+    borderRadius: BorderRadius.lg,
   },
   fabContainer: {
     position: "absolute",
@@ -534,18 +588,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: Spacing.lg,
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.xl,
     gap: Spacing.md,
   },
-  learnIcon: {
-    width: 44,
-    height: 44,
+  learnIconContainer: {
+    width: 48,
+    height: 48,
     borderRadius: BorderRadius.md,
     alignItems: "center",
     justifyContent: "center",
   },
   learnContent: {
     flex: 1,
-    gap: 2,
+    gap: 4,
   },
 });

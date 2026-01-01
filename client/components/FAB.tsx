@@ -1,15 +1,19 @@
 import React from "react";
-import { StyleSheet, Pressable } from "react-native";
+import { StyleSheet, Pressable, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   WithSpringConfig,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
 } from "react-native-reanimated";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/hooks/useTheme";
-import { Colors, BorderRadius } from "@/constants/theme";
+import { Colors, BorderRadius, Shadows } from "@/constants/theme";
 
 interface FABProps {
   onPress: () => void;
@@ -17,19 +21,37 @@ interface FABProps {
 }
 
 const springConfig: WithSpringConfig = {
-  damping: 15,
+  damping: 12,
   mass: 0.5,
-  stiffness: 200,
+  stiffness: 180,
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function FAB({ onPress, icon = "plus" }: FABProps) {
-  const { theme } = useTheme();
+  const { theme, colorScheme } = useTheme();
+  const colors = Colors[colorScheme];
   const scale = useSharedValue(1);
+  const pulseScale = useSharedValue(1);
+
+  React.useEffect(() => {
+    pulseScale.value = withRepeat(
+      withSequence(
+        withTiming(1.15, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+  }, []);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
+  }));
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+    opacity: 2 - pulseScale.value,
   }));
 
   const handlePressIn = () => {
@@ -46,32 +68,48 @@ export function FAB({ onPress, icon = "plus" }: FABProps) {
   };
 
   return (
-    <AnimatedPressable
-      onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      style={[
-        styles.fab,
-        { backgroundColor: Colors.light.primary },
-        animatedStyle,
-      ]}
-    >
-      <Feather name={icon} size={28} color="#FFFFFF" />
-    </AnimatedPressable>
+    <View style={styles.container}>
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.pulse,
+          { backgroundColor: colors.primary },
+          pulseStyle,
+        ]}
+      />
+      <AnimatedPressable
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={[
+          styles.fab,
+          { backgroundColor: colors.primary },
+          Shadows.lg,
+          animatedStyle,
+        ]}
+      >
+        <Feather name={icon} size={28} color="#FFFFFF" />
+      </AnimatedPressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  fab: {
-    width: 64,
-    height: 64,
-    borderRadius: BorderRadius.full,
+  container: {
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 10,
+  },
+  pulse: {
+    position: "absolute",
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+  },
+  fab: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
