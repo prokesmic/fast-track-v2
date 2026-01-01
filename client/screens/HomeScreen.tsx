@@ -309,7 +309,7 @@ export default function HomeScreen() {
           </View>
         </View>
       ) : (
-        <View style={styles.statsSection}>
+        <View style={[styles.statsSection, { marginBottom: 80 }]}>
           <StatsCard
             icon="zap"
             label="Current Streak"
