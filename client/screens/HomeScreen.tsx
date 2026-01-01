@@ -64,6 +64,19 @@ function getGreeting(): string {
   return "Good evening";
 }
 
+function formatHours(hours: number): string {
+  const roundedHours = Math.round(hours);
+  if (roundedHours >= 24) {
+    const days = Math.floor(roundedHours / 24);
+    const remainingHours = roundedHours % 24;
+    if (remainingHours === 0) {
+      return `${days}d`;
+    }
+    return `${days}d ${remainingHours}h`;
+  }
+  return `${roundedHours}h`;
+}
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
@@ -338,9 +351,9 @@ export default function HomeScreen() {
                 <View style={[styles.statIcon, { backgroundColor: "#F59E0B15" }]}>
                   <Feather name="clock" size={20} color="#F59E0B" />
                 </View>
-                <ThemedText type="h3">{Math.round(stats.totalHours)}h</ThemedText>
+                <ThemedText type="h3">{formatHours(stats.totalHours)}</ThemedText>
                 <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                  Hours Fasted
+                  Time Fasted
                 </ThemedText>
               </View>
             </View>
