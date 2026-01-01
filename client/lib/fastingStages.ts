@@ -158,7 +158,7 @@ export const FASTING_STAGES: FastingStage[] = [
     timeRange: "12-18 hours",
     startHours: 12,
     endHours: 18,
-    icon: "flame",
+    icon: "zap",
     color: "#F59E0B",
     description:
       "Upon entering the fasted state, the body begins to shift its primary energy source from glucose to fat. This transition involves lipolysis, the breakdown of triglycerides in adipose tissue into free fatty acids and glycerol, which are then used for energy.",
@@ -193,7 +193,7 @@ export const FASTING_STAGES: FastingStage[] = [
     timeRange: "18-24 hours",
     startHours: 18,
     endHours: 24,
-    icon: "flame",
+    icon: "thermometer",
     color: "#EF4444",
     description:
       "Ketosis becomes more pronounced as the liver increases ketone production. These ketones serve as a significant energy source for the brain and other tissues, reducing the need for glucose and sparing muscle protein.",
