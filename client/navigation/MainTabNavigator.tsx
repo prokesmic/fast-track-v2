@@ -8,8 +8,6 @@ import PlansScreen from "@/screens/PlansScreen";
 import HistoryScreen from "@/screens/HistoryScreen";
 import ProfileScreen from "@/screens/ProfileScreen";
 import { useTheme } from "@/hooks/useTheme";
-import { useScreenOptions } from "@/hooks/useScreenOptions";
-
 export type MainTabParamList = {
   HomeTab: undefined;
   PlansTab: undefined;
@@ -21,7 +19,6 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export default function MainTabNavigator() {
   const { theme, isDark } = useTheme();
-  const screenOptions = useScreenOptions();
 
   return (
     <Tab.Navigator
@@ -37,6 +34,12 @@ export default function MainTabNavigator() {
           }),
           borderTopWidth: 0,
           elevation: 0,
+          paddingBottom: 8,
+          paddingHorizontal: 16,
+          height: 90,
+        },
+        tabBarItemStyle: {
+          paddingTop: 8,
         },
         tabBarBackground: () =>
           Platform.OS === "ios" ? (
@@ -46,7 +49,6 @@ export default function MainTabNavigator() {
               style={StyleSheet.absoluteFill}
             />
           ) : null,
-        ...screenOptions,
       }}
     >
       <Tab.Screen

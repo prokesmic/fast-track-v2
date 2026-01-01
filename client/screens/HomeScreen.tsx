@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, StyleSheet, Alert, Pressable, Platform } from "react-native";
+import { View, StyleSheet, Alert, Pressable, Platform, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
@@ -8,10 +8,8 @@ import { Feather } from "@expo/vector-icons";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withRepeat,
   withSequence,
-  withDelay,
   Easing,
   withTiming,
 } from "react-native-reanimated";
@@ -19,13 +17,11 @@ import * as Haptics from "expo-haptics";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ProgressRing } from "@/components/ProgressRing";
-import { StatsCard } from "@/components/StatsCard";
 import { FastingStageIndicator } from "@/components/FastingStage";
 import { FAB } from "@/components/FAB";
-import { Button } from "@/components/Button";
 import { useTheme } from "@/hooks/useTheme";
 import { useFasting } from "@/hooks/useFasting";
-import { Spacing, Colors, Fonts, BorderRadius } from "@/constants/theme";
+import { Spacing, Colors, BorderRadius } from "@/constants/theme";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -56,9 +52,9 @@ function formatRemainingTime(ms: number): string {
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   if (hours > 0) {
-    return `${hours}h ${minutes}m remaining`;
+    return `${hours}h ${minutes}m left`;
   }
-  return `${minutes}m remaining`;
+  return `${minutes}m left`;
 }
 
 function getGreeting(): string {
@@ -77,7 +73,6 @@ export default function HomeScreen() {
   const [elapsed, setElapsed] = useState(0);
 
   const pulseAnim = useSharedValue(1);
-  const glowAnim = useSharedValue(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -89,23 +84,14 @@ export default function HomeScreen() {
     if (activeFast) {
       pulseAnim.value = withRepeat(
         withSequence(
-          withTiming(1.02, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1.015, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
           withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.ease) })
-        ),
-        -1,
-        true
-      );
-      glowAnim.value = withRepeat(
-        withSequence(
-          withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0.5, { duration: 2000, easing: Easing.inOut(Easing.ease) })
         ),
         -1,
         true
       );
     } else {
       pulseAnim.value = 1;
-      glowAnim.value = 0;
     }
   }, [activeFast]);
 
@@ -178,18 +164,13 @@ export default function HomeScreen() {
     transform: [{ scale: pulseAnim.value }],
   }));
 
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowAnim.value,
-  }));
-
   return (
     <View
       style={[
         styles.container,
         {
           backgroundColor: theme.backgroundRoot,
-          paddingTop: insets.top + Spacing.lg,
-          paddingBottom: tabBarHeight + Spacing.xl,
+          paddingTop: insets.top + Spacing.md,
         },
       ]}
     >
@@ -198,158 +179,174 @@ export default function HomeScreen() {
           <ThemedText type="small" style={{ color: theme.textSecondary }}>
             {getGreeting()}
           </ThemedText>
-          <ThemedText type="h2">FastTrack</ThemedText>
+          <ThemedText type="h3">FastTrack</ThemedText>
         </View>
-        {activeFast ? (
-          <FastingStageIndicator hoursElapsed={elapsedHours} compact />
-        ) : (
-          <View style={[styles.quickStatBadge, { backgroundColor: theme.backgroundDefault }]}>
-            <Feather name="zap" size={14} color={Colors.light.primary} />
-            <ThemedText type="small" style={{ color: theme.text, fontWeight: "600" }}>
-              {stats.currentStreak}d streak
-            </ThemedText>
-          </View>
-        )}
+        <View style={[styles.streakBadge, { backgroundColor: theme.backgroundDefault }]}>
+          <Feather name="zap" size={14} color={Colors.light.primary} />
+          <ThemedText type="small" style={{ color: theme.text, fontWeight: "600" }}>
+            {stats.currentStreak}d
+          </ThemedText>
+        </View>
       </View>
 
-      <View style={styles.timerSection}>
-        <Animated.View style={[styles.timerWrapper, pulseStyle]}>
-          {activeFast ? (
-            <Animated.View style={[styles.timerGlow, glowStyle, { borderColor: Colors.light.primary }]} />
-          ) : null}
-          <ProgressRing progress={progress} size={300}>
-            <View style={styles.timerContent}>
-              {activeFast ? (
-                <>
-                  <View style={[styles.planBadge, { backgroundColor: theme.primary + "15" }]}>
-                    <ThemedText type="small" style={{ color: theme.primary, fontWeight: "600" }}>
-                      {activeFast.planName}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: tabBarHeight + 100 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.timerSection}>
+          <Animated.View style={[styles.timerWrapper, pulseStyle]}>
+            <ProgressRing progress={progress} size={240} strokeWidth={14}>
+              <View style={styles.timerContent}>
+                {activeFast ? (
+                  <>
+                    <View style={[styles.planBadge, { backgroundColor: theme.primary + "15" }]}>
+                      <ThemedText type="small" style={{ color: theme.primary, fontWeight: "600" }}>
+                        {activeFast.planName}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.timerDisplay}>
+                      <ThemedText style={[styles.timerText, { color: theme.text }]}>
+                        {time.hours}:{time.minutes}
+                      </ThemedText>
+                      <ThemedText style={[styles.timerSeconds, { color: theme.textSecondary }]}>
+                        :{time.seconds}
+                      </ThemedText>
+                    </View>
+                    <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                      {remaining > 0 ? formatRemainingTime(remaining) : "Goal reached!"}
                     </ThemedText>
-                  </View>
-                  <View style={styles.timerDisplay}>
-                    <ThemedText
-                      style={[styles.timerText, { color: theme.text }]}
-                    >
-                      {time.hours}:{time.minutes}
+                  </>
+                ) : (
+                  <>
+                    <Feather name="clock" size={32} color={theme.textSecondary} />
+                    <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.sm }}>
+                      Ready to fast?
                     </ThemedText>
-                    <ThemedText
-                      style={[styles.timerSeconds, { color: theme.textSecondary }]}
-                    >
-                      :{time.seconds}
-                    </ThemedText>
-                  </View>
-                  <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                    {remaining > 0 ? formatRemainingTime(remaining) : "Goal reached!"}
-                  </ThemedText>
-                </>
-              ) : (
-                <>
-                  <Feather name="clock" size={40} color={theme.textSecondary} />
-                  <ThemedText type="h4" style={{ color: theme.textSecondary, marginTop: Spacing.md }}>
-                    Ready to fast?
-                  </ThemedText>
-                  <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                    Tap the button below
-                  </ThemedText>
-                </>
-              )}
-            </View>
-          </ProgressRing>
-        </Animated.View>
+                  </>
+                )}
+              </View>
+            </ProgressRing>
+          </Animated.View>
+        </View>
 
         {activeFast ? (
-          <View style={styles.stageSection}>
+          <>
             <FastingStageIndicator hoursElapsed={elapsedHours} />
-          </View>
-        ) : null}
-      </View>
 
-      {activeFast ? (
-        <View style={[styles.activeInfoCard, { backgroundColor: theme.backgroundDefault }]}>
-          <View style={styles.infoRow}>
-            <View style={styles.infoItem}>
-              <Feather name="play-circle" size={16} color={Colors.light.success} />
-              <View>
-                <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                  Started
-                </ThemedText>
-                <ThemedText type="body" style={{ fontWeight: "600" }}>
-                  {new Date(activeFast.startTime).toLocaleTimeString("en-US", {
-                    hour: "numeric",
-                    minute: "2-digit",
-                    hour12: true,
-                  })}
-                </ThemedText>
+            <View style={[styles.infoCard, { backgroundColor: theme.backgroundDefault }]}>
+              <View style={styles.infoRow}>
+                <View style={styles.infoItem}>
+                  <View style={[styles.infoIcon, { backgroundColor: Colors.light.success + "15" }]}>
+                    <Feather name="play" size={14} color={Colors.light.success} />
+                  </View>
+                  <View>
+                    <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                      Started
+                    </ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "600" }}>
+                      {new Date(activeFast.startTime).toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}
+                    </ThemedText>
+                  </View>
+                </View>
+                <View style={styles.infoItem}>
+                  <View style={[styles.infoIcon, { backgroundColor: theme.primary + "15" }]}>
+                    <Feather name="flag" size={14} color={theme.primary} />
+                  </View>
+                  <View>
+                    <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                      Goal
+                    </ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "600" }}>
+                      {formatTargetTime(activeFast.startTime, activeFast.targetDuration)}
+                    </ThemedText>
+                  </View>
+                </View>
+                <View style={styles.infoItem}>
+                  <View style={[styles.infoIcon, { backgroundColor: Colors.light.secondary + "15" }]}>
+                    <Feather name="percent" size={14} color={Colors.light.secondary} />
+                  </View>
+                  <View>
+                    <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                      Progress
+                    </ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "600" }}>
+                      {Math.round(progress * 100)}%
+                    </ThemedText>
+                  </View>
+                </View>
               </View>
             </View>
-            <View style={[styles.infoDivider, { backgroundColor: theme.backgroundTertiary }]} />
-            <View style={styles.infoItem}>
-              <Feather name="flag" size={16} color={theme.primary} />
-              <View>
-                <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                  Goal
-                </ThemedText>
-                <ThemedText type="body" style={{ fontWeight: "600" }}>
-                  {formatTargetTime(activeFast.startTime, activeFast.targetDuration)}
-                </ThemedText>
-              </View>
-            </View>
-            <View style={[styles.infoDivider, { backgroundColor: theme.backgroundTertiary }]} />
-            <View style={styles.infoItem}>
-              <Feather name="percent" size={16} color={Colors.light.secondary} />
-              <View>
-                <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                  Progress
-                </ThemedText>
-                <ThemedText type="body" style={{ fontWeight: "600" }}>
-                  {Math.round(progress * 100)}%
-                </ThemedText>
-              </View>
-            </View>
-          </View>
-        </View>
-      ) : (
-        <View style={[styles.statsSection, { marginBottom: 80 }]}>
-          <StatsCard
-            icon="zap"
-            label="Current Streak"
-            value={`${stats.currentStreak}d`}
-            iconColor={Colors.light.primary}
-          />
-          <StatsCard
-            icon="award"
-            label="Longest"
-            value={`${stats.longestStreak}d`}
-            iconColor={Colors.light.secondary}
-          />
-          <StatsCard
-            icon="check-circle"
-            label="Fasts"
-            value={stats.totalFasts}
-            iconColor={Colors.light.success}
-          />
-        </View>
-      )}
 
-      {activeFast ? (
-        <View style={styles.endButtonContainer}>
-          <Pressable
-            onPress={handleEndFast}
-            style={({ pressed }) => [
-              styles.endButton,
-              {
-                backgroundColor: Colors.light.destructive + (pressed ? "E0" : ""),
-                opacity: pressed ? 0.9 : 1,
-              },
-            ]}
-          >
-            <Feather name="stop-circle" size={20} color="#FFFFFF" />
-            <ThemedText type="body" style={{ color: "#FFFFFF", fontWeight: "600" }}>
-              End Fast
-            </ThemedText>
-          </Pressable>
-        </View>
-      ) : null}
+            <Pressable
+              onPress={handleEndFast}
+              style={({ pressed }) => [
+                styles.endButton,
+                {
+                  backgroundColor: Colors.light.destructive,
+                  opacity: pressed ? 0.9 : 1,
+                },
+              ]}
+            >
+              <Feather name="stop-circle" size={18} color="#FFFFFF" />
+              <ThemedText type="body" style={{ color: "#FFFFFF", fontWeight: "600" }}>
+                End Fast
+              </ThemedText>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <View style={styles.statsGrid}>
+              <View style={[styles.statCard, { backgroundColor: theme.backgroundDefault }]}>
+                <View style={[styles.statIcon, { backgroundColor: Colors.light.primary + "15" }]}>
+                  <Feather name="zap" size={20} color={Colors.light.primary} />
+                </View>
+                <ThemedText type="h3">{stats.currentStreak}d</ThemedText>
+                <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                  Current Streak
+                </ThemedText>
+              </View>
+              <View style={[styles.statCard, { backgroundColor: theme.backgroundDefault }]}>
+                <View style={[styles.statIcon, { backgroundColor: Colors.light.secondary + "15" }]}>
+                  <Feather name="award" size={20} color={Colors.light.secondary} />
+                </View>
+                <ThemedText type="h3">{stats.longestStreak}d</ThemedText>
+                <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                  Best Streak
+                </ThemedText>
+              </View>
+            </View>
+
+            <View style={styles.statsGrid}>
+              <View style={[styles.statCard, { backgroundColor: theme.backgroundDefault }]}>
+                <View style={[styles.statIcon, { backgroundColor: Colors.light.success + "15" }]}>
+                  <Feather name="check-circle" size={20} color={Colors.light.success} />
+                </View>
+                <ThemedText type="h3">{stats.totalFasts}</ThemedText>
+                <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                  Fasts Completed
+                </ThemedText>
+              </View>
+              <View style={[styles.statCard, { backgroundColor: theme.backgroundDefault }]}>
+                <View style={[styles.statIcon, { backgroundColor: "#F59E0B15" }]}>
+                  <Feather name="clock" size={20} color="#F59E0B" />
+                </View>
+                <ThemedText type="h3">{Math.round(stats.totalHours)}h</ThemedText>
+                <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                  Hours Fasted
+                </ThemedText>
+              </View>
+            </View>
+          </>
+        )}
+      </ScrollView>
 
       {!activeFast ? (
         <View style={[styles.fabContainer, { bottom: tabBarHeight + Spacing.xl }]}>
@@ -363,15 +360,15 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: Spacing.lg,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
   },
-  quickStatBadge: {
+  streakBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.xs,
@@ -379,87 +376,90 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.full,
   },
-  timerSection: {
+  scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.lg,
+  },
+  timerSection: {
     alignItems: "center",
-    justifyContent: "center",
-    gap: Spacing.xl,
+    paddingVertical: Spacing.lg,
   },
   timerWrapper: {
-    position: "relative",
     alignItems: "center",
     justifyContent: "center",
-  },
-  timerGlow: {
-    position: "absolute",
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    borderWidth: 2,
   },
   timerContent: {
     alignItems: "center",
     gap: Spacing.xs,
   },
   planBadge: {
-    paddingVertical: Spacing.xs,
+    paddingVertical: 4,
     paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.full,
-    marginBottom: Spacing.xs,
+    marginBottom: 4,
   },
   timerDisplay: {
     flexDirection: "row",
     alignItems: "baseline",
   },
   timerText: {
-    fontSize: 56,
+    fontSize: 44,
     fontWeight: "700",
     fontVariant: ["tabular-nums"],
   },
   timerSeconds: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "600",
     fontVariant: ["tabular-nums"],
   },
-  stageSection: {
-    width: "100%",
-  },
-  activeInfoCard: {
+  infoCard: {
     borderRadius: BorderRadius.lg,
     padding: Spacing.lg,
-    marginTop: Spacing.lg,
   },
   infoRow: {
     flexDirection: "row",
-    alignItems: "center",
+    justifyContent: "space-between",
   },
   infoItem: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.sm,
   },
-  infoDivider: {
-    width: 1,
+  infoIcon: {
+    width: 32,
     height: 32,
-    marginHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  statsSection: {
+  statsGrid: {
     flexDirection: "row",
-    gap: Spacing.sm,
-    marginTop: Spacing.xl,
+    gap: Spacing.md,
   },
-  endButtonContainer: {
-    marginTop: Spacing.lg,
+  statCard: {
+    flex: 1,
+    alignItems: "center",
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    gap: Spacing.sm,
+  },
+  statIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.md,
+    alignItems: "center",
+    justifyContent: "center",
   },
   endButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: Spacing.sm,
-    paddingVertical: Spacing.lg,
+    paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
-    backgroundColor: Colors.light.destructive,
   },
   fabContainer: {
     position: "absolute",
