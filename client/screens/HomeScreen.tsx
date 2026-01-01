@@ -197,7 +197,7 @@ export default function HomeScreen() {
         <View style={[styles.streakBadge, { backgroundColor: theme.backgroundDefault }]}>
           <Feather name="zap" size={14} color={Colors.light.primary} />
           <ThemedText type="small" style={{ color: theme.text, fontWeight: "600" }}>
-            {stats.currentStreak}d
+            {formatHours(stats.currentStreak * 24)}
           </ThemedText>
         </View>
       </View>
@@ -321,7 +321,7 @@ export default function HomeScreen() {
                 <View style={[styles.statIcon, { backgroundColor: Colors.light.primary + "15" }]}>
                   <Feather name="zap" size={20} color={Colors.light.primary} />
                 </View>
-                <ThemedText type="h3">{stats.currentStreak}d</ThemedText>
+                <ThemedText type="h3">{formatHours(stats.currentStreak * 24)}</ThemedText>
                 <ThemedText type="small" style={{ color: theme.textSecondary }}>
                   Current Streak
                 </ThemedText>
@@ -330,7 +330,7 @@ export default function HomeScreen() {
                 <View style={[styles.statIcon, { backgroundColor: Colors.light.secondary + "15" }]}>
                   <Feather name="award" size={20} color={Colors.light.secondary} />
                 </View>
-                <ThemedText type="h3">{stats.longestStreak}d</ThemedText>
+                <ThemedText type="h3">{formatHours(stats.longestStreak * 24)}</ThemedText>
                 <ThemedText type="small" style={{ color: theme.textSecondary }}>
                   Best Streak
                 </ThemedText>
