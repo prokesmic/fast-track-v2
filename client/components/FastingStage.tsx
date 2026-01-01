@@ -112,6 +112,7 @@ export function FastingStageIndicator({
           {stageInfo.description}
         </ThemedText>
       </View>
+      <Feather name="chevron-right" size={20} color={theme.textSecondary} />
     </View>
   );
 }

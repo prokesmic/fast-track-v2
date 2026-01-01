@@ -248,7 +248,12 @@ export default function HomeScreen() {
 
         {activeFast ? (
           <>
-            <FastingStageIndicator hoursElapsed={elapsedHours} />
+            <Pressable
+              onPress={() => navigation.navigate("FastingStages", { hoursElapsed: elapsedHours })}
+              style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
+            >
+              <FastingStageIndicator hoursElapsed={elapsedHours} />
+            </Pressable>
 
             <View style={[styles.infoCard, { backgroundColor: theme.backgroundDefault }]}>
               <View style={styles.infoRow}>
@@ -357,6 +362,30 @@ export default function HomeScreen() {
                 </ThemedText>
               </View>
             </View>
+
+            <Pressable
+              onPress={() => navigation.navigate("FastingStages", { hoursElapsed: 0 })}
+              style={({ pressed }) => [
+                styles.learnButton,
+                {
+                  backgroundColor: theme.backgroundDefault,
+                  opacity: pressed ? 0.8 : 1,
+                },
+              ]}
+            >
+              <View style={[styles.learnIcon, { backgroundColor: Colors.light.secondary + "15" }]}>
+                <Feather name="book-open" size={20} color={Colors.light.secondary} />
+              </View>
+              <View style={styles.learnContent}>
+                <ThemedText type="body" style={{ fontWeight: "600" }}>
+                  Learn About Fasting Stages
+                </ThemedText>
+                <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                  Understand what happens to your body during fasting
+                </ThemedText>
+              </View>
+              <Feather name="chevron-right" size={20} color={theme.textSecondary} />
+            </Pressable>
           </>
         )}
       </ScrollView>
@@ -479,5 +508,23 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: "center",
+  },
+  learnButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    gap: Spacing.md,
+  },
+  learnIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  learnContent: {
+    flex: 1,
+    gap: 2,
   },
 });

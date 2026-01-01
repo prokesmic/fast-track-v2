@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import MainTabNavigator from "@/navigation/MainTabNavigator";
 import StartFastModal from "@/screens/StartFastModal";
 import PlanDetailModal from "@/screens/PlanDetailModal";
+import FastingStagesScreen from "@/screens/FastingStagesScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 
 export type FastingPlan = {
@@ -19,6 +20,7 @@ export type RootStackParamList = {
   Main: undefined;
   StartFast: { plan?: FastingPlan };
   PlanDetail: { plan: FastingPlan };
+  FastingStages: { hoursElapsed?: number };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -47,6 +49,13 @@ export default function RootStackNavigator() {
         options={{
           presentation: "modal",
           headerTitle: "Plan Details",
+        }}
+      />
+      <Stack.Screen
+        name="FastingStages"
+        component={FastingStagesScreen}
+        options={{
+          headerTitle: "Fasting Stages",
         }}
       />
     </Stack.Navigator>
