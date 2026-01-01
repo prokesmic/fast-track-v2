@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, StyleSheet, Alert, Pressable } from "react-native";
+import { View, StyleSheet, Alert, Pressable, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
@@ -129,31 +129,43 @@ export default function HomeScreen() {
     navigation.navigate("StartFast", {});
   };
 
-  const handleEndFast = () => {
+  const handleEndFast = async () => {
     const elapsedHours = elapsed / (1000 * 60 * 60);
     const completed = elapsedHours >= (activeFast?.targetDuration || 0);
 
-    Alert.alert(
-      completed ? "Complete Fast" : "End Fast Early",
-      completed
-        ? "Congratulations! You've completed your fasting goal. End fast now?"
-        : "You haven't reached your fasting goal yet. End fast early?",
-      [
+    const title = completed ? "Complete Fast" : "End Fast Early";
+    const message = completed
+      ? "Congratulations! You've completed your fasting goal. End fast now?"
+      : "You haven't reached your fasting goal yet. End fast early?";
+
+    const doEndFast = async () => {
+      try {
+        Haptics.notificationAsync(
+          completed
+            ? Haptics.NotificationFeedbackType.Success
+            : Haptics.NotificationFeedbackType.Warning
+        );
+        await endFast(completed);
+      } catch (error) {
+        console.error("Error ending fast:", error);
+      }
+    };
+
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm(`${title}\n\n${message}`);
+      if (confirmed) {
+        await doEndFast();
+      }
+    } else {
+      Alert.alert(title, message, [
         { text: "Cancel", style: "cancel" },
         {
           text: completed ? "Complete" : "End Early",
           style: completed ? "default" : "destructive",
-          onPress: async () => {
-            Haptics.notificationAsync(
-              completed
-                ? Haptics.NotificationFeedbackType.Success
-                : Haptics.NotificationFeedbackType.Warning
-            );
-            await endFast(completed);
-          },
+          onPress: doEndFast,
         },
-      ]
-    );
+      ]);
+    }
   };
 
   const targetMs = (activeFast?.targetDuration || 0) * 60 * 60 * 1000;
