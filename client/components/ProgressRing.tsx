@@ -8,6 +8,8 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withRepeat,
+  withSequence,
 } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
 import { Colors, Shadows, BorderRadius } from "@/constants/theme";
@@ -45,36 +47,66 @@ interface MilestoneIconProps {
 }
 
 function MilestoneIcon({ milestone, isPassed, x, y, onPress }: MilestoneIconProps) {
-  const { theme, colorScheme } = useTheme();
+  const { theme } = useTheme();
   const scale = useSharedValue(1);
+  const glowOpacity = useSharedValue(0);
+
+  React.useEffect(() => {
+    if (isPassed) {
+      glowOpacity.value = withRepeat(
+        withSequence(
+          withTiming(0.6, { duration: 1500 }),
+          withTiming(0.3, { duration: 1500 })
+        ),
+        -1,
+        true
+      );
+    } else {
+      glowOpacity.value = withTiming(0, { duration: 300 });
+    }
+  }, [isPassed]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: glowOpacity.value,
+  }));
+
   return (
-    <AnimatedPressable
-      onPress={onPress}
-      onPressIn={() => { scale.value = withSpring(0.85); }}
-      onPressOut={() => { scale.value = withSpring(1); }}
-      style={[
-        styles.milestone,
-        {
-          left: x - 16,
-          top: y - 16,
-          backgroundColor: isPassed ? milestone.color + "20" : theme.backgroundSecondary,
-          borderColor: isPassed ? milestone.color : theme.backgroundTertiary,
-        },
-        animatedStyle,
-      ]}
-      hitSlop={8}
-    >
-      <Feather
-        name={milestone.icon as any}
-        size={16}
-        color={isPassed ? milestone.color : theme.textTertiary}
-      />
-    </AnimatedPressable>
+    <View style={[styles.milestoneContainer, { left: x - 18, top: y - 18 }]}>
+      {isPassed ? (
+        <Animated.View 
+          pointerEvents="none"
+          style={[
+            styles.milestoneGlow, 
+            { backgroundColor: milestone.color },
+            glowStyle,
+          ]} 
+        />
+      ) : null}
+      <AnimatedPressable
+        onPress={onPress}
+        onPressIn={() => { scale.value = withSpring(0.85); }}
+        onPressOut={() => { scale.value = withSpring(1); }}
+        style={[
+          styles.milestone,
+          {
+            backgroundColor: isPassed ? milestone.color : theme.backgroundSecondary,
+          },
+          isPassed ? Shadows.coloredLg(milestone.color) : {},
+          animatedStyle,
+        ]}
+        hitSlop={8}
+      >
+        <Feather
+          name={milestone.icon as any}
+          size={18}
+          color={isPassed ? "#FFFFFF" : theme.textTertiary}
+        />
+      </AnimatedPressable>
+    </View>
   );
 }
 
@@ -103,7 +135,7 @@ export function ProgressRing({
   const colors = Colors[colorScheme];
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const milestoneRadius = radius + strokeWidth / 2 + 28;
+  const milestoneRadius = radius + strokeWidth / 2 + 32;
 
   const animatedProps = useAnimatedProps(() => {
     const clampedProgress = Math.min(Math.max(progress, 0), 1);
@@ -120,8 +152,8 @@ export function ProgressRing({
     const progressFraction = Math.min(hours / maxHours, 1);
     const angle = progressFraction * 360 - 90;
     const radian = (angle * Math.PI) / 180;
-    const centerX = size / 2 + 32;
-    const centerY = size / 2 + 32;
+    const centerX = size / 2 + 36;
+    const centerY = size / 2 + 36;
     return {
       x: centerX + milestoneRadius * Math.cos(radian),
       y: centerY + milestoneRadius * Math.sin(radian),
@@ -138,16 +170,16 @@ export function ProgressRing({
   };
 
   return (
-    <View style={[styles.container, { width: size + 64, height: size + 64 }]}>
+    <View style={[styles.container, { width: size + 72, height: size + 72 }]}>
       <View style={[styles.ringContainer, { width: size, height: size }]}>
         <View
           style={[
             styles.innerGlow,
             {
-              width: size - strokeWidth * 2 - 20,
-              height: size - strokeWidth * 2 - 20,
-              borderRadius: (size - strokeWidth * 2 - 20) / 2,
-              backgroundColor: isDark ? colors.primary + "08" : colors.primary + "05",
+              width: size - strokeWidth * 2 - 24,
+              height: size - strokeWidth * 2 - 24,
+              borderRadius: (size - strokeWidth * 2 - 24) / 2,
+              backgroundColor: isDark ? colors.primary + "08" : colors.primary + "06",
             },
           ]}
         />
@@ -159,8 +191,8 @@ export function ProgressRing({
               <Stop offset="100%" stopColor={colors.gradientEnd} />
             </LinearGradient>
             <LinearGradient id="trackGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <Stop offset="0%" stopColor={isDark ? colors.backgroundSecondary : "#E5E7EB"} />
-              <Stop offset="100%" stopColor={isDark ? colors.backgroundTertiary : "#D1D5DB"} />
+              <Stop offset="0%" stopColor={isDark ? "#334155" : "#E2E8F0"} stopOpacity={0.6} />
+              <Stop offset="100%" stopColor={isDark ? "#475569" : "#CBD5E1"} stopOpacity={0.4} />
             </LinearGradient>
           </Defs>
           <Circle
@@ -170,7 +202,6 @@ export function ProgressRing({
             stroke="url(#trackGradient)"
             strokeWidth={strokeWidth}
             fill="none"
-            opacity={0.5}
           />
           <AnimatedCircle
             cx={size / 2}
@@ -215,8 +246,8 @@ const styles = StyleSheet.create({
   },
   ringContainer: {
     position: "absolute",
-    top: 32,
-    left: 32,
+    top: 36,
+    left: 36,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -230,13 +261,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  milestone: {
+  milestoneContainer: {
     position: "absolute",
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1.5,
+  },
+  milestoneGlow: {
+    position: "absolute",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  milestone: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

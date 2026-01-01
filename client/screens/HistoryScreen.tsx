@@ -4,6 +4,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useFocusEffect } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 
 import { ThemedText } from "@/components/ThemedText";
@@ -12,17 +17,67 @@ import { FastDetailCard } from "@/components/FastDetailCard";
 import { AnalyticsCard } from "@/components/AnalyticsCard";
 import { WeeklyChart } from "@/components/WeeklyChart";
 import { InsightCard } from "@/components/InsightCard";
+import { GlassCard } from "@/components/GlassCard";
+import { GradientBackground } from "@/components/GradientBackground";
 import { useTheme } from "@/hooks/useTheme";
 import { useFasting } from "@/hooks/useFasting";
-import { Spacing, BorderRadius, Colors } from "@/constants/theme";
+import { Spacing, BorderRadius, Colors, Shadows } from "@/constants/theme";
 
 type FilterType = "week" | "month" | "all";
 type ViewType = "overview" | "fasts" | "insights";
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+interface TabButtonProps {
+  label: string;
+  icon: string;
+  isActive: boolean;
+  onPress: () => void;
+  colors: typeof Colors.light;
+}
+
+function TabButton({ label, icon, isActive, onPress, colors }: TabButtonProps) {
+  const { theme } = useTheme();
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={() => { scale.value = withSpring(0.95); }}
+      onPressOut={() => { scale.value = withSpring(1); }}
+      style={[
+        styles.viewTab,
+        isActive && { backgroundColor: colors.primary },
+        animatedStyle,
+      ]}
+    >
+      <Feather
+        name={icon as any}
+        size={16}
+        color={isActive ? "#FFFFFF" : theme.textSecondary}
+      />
+      <ThemedText
+        type="caption"
+        style={{
+          color: isActive ? "#FFFFFF" : theme.textSecondary,
+          fontWeight: isActive ? "700" : "500",
+        }}
+      >
+        {label}
+      </ThemedText>
+    </AnimatedPressable>
+  );
+}
+
 export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
-  const { theme } = useTheme();
+  const { theme, colorScheme } = useTheme();
+  const colors = Colors[colorScheme];
   const { fasts, stats, refresh } = useFasting();
   const [filter, setFilter] = useState<FilterType>("month");
   const [viewType, setViewType] = useState<ViewType>("overview");
@@ -148,7 +203,7 @@ export default function HistoryScreen() {
         title: "Strong Fasting Discipline",
         description: `Your average fast duration is ${Math.round(avgDuration)}h - you're reaching deep fat burning consistently!`,
         icon: "award" as const,
-        color: Colors.light.primary,
+        color: colors.primary,
       });
     }
 
@@ -157,7 +212,7 @@ export default function HistoryScreen() {
         title: "Building Momentum",
         description: `${stats.currentStreak} day streak! Consistency is key to metabolic flexibility.`,
         icon: "trending-up" as const,
-        color: Colors.light.success,
+        color: colors.success,
       });
     }
 
@@ -170,7 +225,7 @@ export default function HistoryScreen() {
         title: "Overnight Fasting Pro",
         description: "You typically start fasts in the evening - aligning with your circadian rhythm!",
         icon: "moon" as const,
-        color: Colors.light.secondary,
+        color: colors.secondary,
       });
     }
 
@@ -179,12 +234,12 @@ export default function HistoryScreen() {
         title: "Getting Started",
         description: "Complete more fasts to unlock personalized insights about your fasting patterns!",
         icon: "compass" as const,
-        color: Colors.light.primary,
+        color: colors.primary,
       });
     }
 
     return result;
-  }, [completedFasts, stats]);
+  }, [completedFasts, stats, colors]);
 
   const calendarFastDays = useMemo(() => 
     completedFasts.map((f) => ({
@@ -215,269 +270,322 @@ export default function HistoryScreen() {
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: theme.backgroundRoot }}
-      contentContainerStyle={[
-        styles.container,
-        {
-          paddingTop: Spacing.xl,
-          paddingBottom: tabBarHeight + Spacing.xl,
-        },
-      ]}
-      scrollIndicatorInsets={{ bottom: insets.bottom }}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={[styles.viewTabs, { backgroundColor: theme.backgroundDefault }]}>
-        {(["overview", "fasts", "insights"] as ViewType[]).map((v) => (
-          <Pressable
-            key={v}
-            onPress={() => handleViewChange(v)}
-            style={[
-              styles.viewTab,
-              viewType === v && { backgroundColor: theme.primary },
-            ]}
-          >
-            <Feather
-              name={v === "overview" ? "bar-chart-2" : v === "fasts" ? "list" : "zap"}
-              size={16}
-              color={viewType === v ? "#FFFFFF" : theme.textSecondary}
+    <View style={styles.container}>
+      <GradientBackground variant="history" />
+      
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: insets.top + Spacing["3xl"],
+            paddingBottom: tabBarHeight + Spacing.xl,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <ThemedText type="h1">History</ThemedText>
+          <ThemedText type="body" style={{ color: theme.textSecondary }}>
+            Track your fasting journey
+          </ThemedText>
+        </View>
+
+        <GlassCard noPadding>
+          <View style={styles.viewTabs}>
+            <TabButton
+              label="Overview"
+              icon="bar-chart-2"
+              isActive={viewType === "overview"}
+              onPress={() => handleViewChange("overview")}
+              colors={colors}
             />
-            <ThemedText
-              type="small"
-              style={{
-                color: viewType === v ? "#FFFFFF" : theme.textSecondary,
-                fontWeight: viewType === v ? "600" : "400",
-              }}
-            >
-              {v.charAt(0).toUpperCase() + v.slice(1)}
-            </ThemedText>
-          </Pressable>
-        ))}
-      </View>
-
-      {viewType === "overview" ? (
-        <>
-          <View style={styles.analyticsRow}>
-            <View style={styles.analyticsHalf}>
-              <AnalyticsCard
-                title="Hours Fasted"
-                value={formatTotalHours(analyticsData.totalHours)}
-                subtitle="This week"
-                trend={analyticsData.hoursTrend}
-                icon="clock"
-                color={Colors.light.primary}
-                data={analyticsData.hoursChartData}
-              />
-            </View>
-            <View style={styles.analyticsHalf}>
-              <AnalyticsCard
-                title="Completion"
-                value={`${analyticsData.completionRate}%`}
-                subtitle="Success rate"
-                trend={analyticsData.completionTrend}
-                icon="target"
-                color={Colors.light.success}
-                showChart={false}
-              />
-            </View>
+            <TabButton
+              label="Fasts"
+              icon="list"
+              isActive={viewType === "fasts"}
+              onPress={() => handleViewChange("fasts")}
+              colors={colors}
+            />
+            <TabButton
+              label="Insights"
+              icon="zap"
+              isActive={viewType === "insights"}
+              onPress={() => handleViewChange("insights")}
+              colors={colors}
+            />
           </View>
+        </GlassCard>
 
-          <WeeklyChart data={weeklyData} maxHours={24} />
-
-          <View
-            style={[styles.calendarCard, { backgroundColor: theme.backgroundDefault }]}
-          >
-            <View style={styles.calendarHeader}>
-              <ThemedText type="body" style={{ fontWeight: "600" }}>
-                Fasting Calendar
-              </ThemedText>
-              <View style={styles.monthNav}>
-                <Pressable
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    const prev = new Date(selectedMonth);
-                    prev.setMonth(prev.getMonth() - 1);
-                    setSelectedMonth(prev);
-                  }}
-                  hitSlop={8}
-                >
-                  <Feather name="chevron-left" size={20} color={theme.textSecondary} />
-                </Pressable>
-                <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                  {selectedMonth.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
-                </ThemedText>
-                <Pressable
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    const next = new Date(selectedMonth);
-                    next.setMonth(next.getMonth() + 1);
-                    setSelectedMonth(next);
-                  }}
-                  hitSlop={8}
-                >
-                  <Feather name="chevron-right" size={20} color={theme.textSecondary} />
-                </Pressable>
+        {viewType === "overview" ? (
+          <>
+            <View style={styles.analyticsRow}>
+              <View style={styles.analyticsHalf}>
+                <AnalyticsCard
+                  title="Hours Fasted"
+                  value={formatTotalHours(analyticsData.totalHours)}
+                  subtitle="This week"
+                  trend={analyticsData.hoursTrend}
+                  icon="clock"
+                  color={colors.primary}
+                  data={analyticsData.hoursChartData}
+                />
+              </View>
+              <View style={styles.analyticsHalf}>
+                <AnalyticsCard
+                  title="Completion"
+                  value={`${analyticsData.completionRate}%`}
+                  subtitle="Success rate"
+                  trend={analyticsData.completionTrend}
+                  icon="target"
+                  color={colors.success}
+                  showChart={false}
+                />
               </View>
             </View>
-            <CalendarHeatmap
-              month={selectedMonth}
-              fastDays={calendarFastDays}
-              onDayPress={(date) => {
-                Haptics.selectionAsync();
-              }}
-            />
-          </View>
-        </>
-      ) : null}
 
-      {viewType === "fasts" ? (
-        <>
-          <View style={styles.filterContainer}>
-            <View style={[styles.filterTabs, { backgroundColor: theme.backgroundDefault }]}>
-              {(["week", "month", "all"] as FilterType[]).map((f) => (
-                <Pressable
-                  key={f}
-                  onPress={() => handleFilterChange(f)}
-                  style={[
-                    styles.filterTab,
-                    filter === f && { backgroundColor: theme.primary },
-                  ]}
-                >
-                  <ThemedText
-                    type="small"
-                    style={{
-                      color: filter === f ? "#FFFFFF" : theme.textSecondary,
-                      fontWeight: filter === f ? "600" : "400",
-                    }}
-                  >
-                    {f === "week" ? "Week" : f === "month" ? "Month" : "All Time"}
+            <WeeklyChart data={weeklyData} maxHours={24} />
+
+            <GlassCard>
+              <View style={styles.calendarHeader}>
+                <View>
+                  <ThemedText type="h4">Fasting Calendar</ThemedText>
+                  <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                    Your monthly activity
                   </ThemedText>
-                </Pressable>
+                </View>
+                <View style={styles.monthNav}>
+                  <Pressable
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      const prev = new Date(selectedMonth);
+                      prev.setMonth(prev.getMonth() - 1);
+                      setSelectedMonth(prev);
+                    }}
+                    style={[styles.monthNavButton, { backgroundColor: colors.primary + "15" }]}
+                    hitSlop={8}
+                  >
+                    <Feather name="chevron-left" size={18} color={colors.primary} />
+                  </Pressable>
+                  <ThemedText type="bodyMedium" style={{ color: theme.text }}>
+                    {selectedMonth.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                  </ThemedText>
+                  <Pressable
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      const next = new Date(selectedMonth);
+                      next.setMonth(next.getMonth() + 1);
+                      setSelectedMonth(next);
+                    }}
+                    style={[styles.monthNavButton, { backgroundColor: colors.primary + "15" }]}
+                    hitSlop={8}
+                  >
+                    <Feather name="chevron-right" size={18} color={colors.primary} />
+                  </Pressable>
+                </View>
+              </View>
+              <CalendarHeatmap
+                month={selectedMonth}
+                fastDays={calendarFastDays}
+                onDayPress={(date) => {
+                  Haptics.selectionAsync();
+                }}
+              />
+            </GlassCard>
+          </>
+        ) : null}
+
+        {viewType === "fasts" ? (
+          <>
+            <GlassCard noPadding>
+              <View style={styles.filterTabs}>
+                {(["week", "month", "all"] as FilterType[]).map((f) => (
+                  <Pressable
+                    key={f}
+                    onPress={() => handleFilterChange(f)}
+                    style={[
+                      styles.filterTab,
+                      filter === f && { backgroundColor: colors.primary },
+                    ]}
+                  >
+                    <ThemedText
+                      type="caption"
+                      style={{
+                        color: filter === f ? "#FFFFFF" : theme.textSecondary,
+                        fontWeight: filter === f ? "700" : "500",
+                      }}
+                    >
+                      {f === "week" ? "Week" : f === "month" ? "Month" : "All Time"}
+                    </ThemedText>
+                  </Pressable>
+                ))}
+              </View>
+            </GlassCard>
+
+            <View style={styles.summaryRow}>
+              <GlassCard style={styles.summaryCard} intensity="light">
+                <ThemedText type="h2" style={{ color: colors.primary }}>
+                  {filteredFasts.length}
+                </ThemedText>
+                <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                  Fasts
+                </ThemedText>
+              </GlassCard>
+              <GlassCard style={styles.summaryCard} intensity="light">
+                <ThemedText type="h2" style={{ color: colors.success }}>
+                  {formatTotalHours(
+                    filteredFasts.reduce((sum, f) => sum + (f.endTime! - f.startTime) / (1000 * 60 * 60), 0)
+                  )}
+                </ThemedText>
+                <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                  Total
+                </ThemedText>
+              </GlassCard>
+              <GlassCard style={styles.summaryCard} intensity="light">
+                <ThemedText type="h2" style={{ color: colors.secondary }}>
+                  {filteredFasts.length > 0
+                    ? Math.round(
+                        filteredFasts.reduce((sum, f) => sum + (f.endTime! - f.startTime) / (1000 * 60 * 60), 0) /
+                          filteredFasts.length
+                      )
+                    : 0}h
+                </ThemedText>
+                <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                  Average
+                </ThemedText>
+              </GlassCard>
+            </View>
+
+            <View style={styles.fastsList}>
+              {filteredFasts.length === 0 ? (
+                <GlassCard style={styles.emptyState}>
+                  <View style={[styles.emptyIcon, { backgroundColor: colors.primary + "15" }]}>
+                    <Feather name="calendar" size={36} color={colors.primary} />
+                  </View>
+                  <ThemedText type="h4" style={{ color: theme.text }}>
+                    No fasts yet
+                  </ThemedText>
+                  <ThemedText type="small" style={{ color: theme.textSecondary, textAlign: "center" }}>
+                    Start your first fast to see your history here
+                  </ThemedText>
+                </GlassCard>
+              ) : (
+                filteredFasts.map((fast) => (
+                  <FastDetailCard
+                    key={fast.id}
+                    date={new Date(fast.endTime!)}
+                    duration={(fast.endTime! - fast.startTime) / (1000 * 60 * 60)}
+                    targetDuration={fast.targetDuration}
+                    planName={fast.planName}
+                    note={fast.note}
+                  />
+                ))
+              )}
+            </View>
+          </>
+        ) : null}
+
+        {viewType === "insights" ? (
+          <View style={styles.insightsSection}>
+            <View style={styles.lifetimeStats}>
+              <View style={styles.sectionHeader}>
+                <View style={[styles.sectionIcon, { backgroundColor: colors.secondary + "18" }]}>
+                  <Feather name="activity" size={18} color={colors.secondary} />
+                </View>
+                <View>
+                  <ThemedText type="h3">Lifetime Stats</ThemedText>
+                  <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                    Your all-time achievements
+                  </ThemedText>
+                </View>
+              </View>
+              <View style={styles.statGrid}>
+                <GlassCard style={styles.statBox} intensity="light">
+                  <View style={[styles.statIconBg, { backgroundColor: colors.primary + "18" }]}>
+                    <Feather name="clock" size={22} color={colors.primary} />
+                  </View>
+                  <ThemedText type="h2" style={{ color: colors.primary }}>
+                    {formatTotalHours(stats.totalHours)}
+                  </ThemedText>
+                  <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                    Total Fasted
+                  </ThemedText>
+                </GlassCard>
+                <GlassCard style={styles.statBox} intensity="light">
+                  <View style={[styles.statIconBg, { backgroundColor: colors.success + "18" }]}>
+                    <Feather name="check-circle" size={22} color={colors.success} />
+                  </View>
+                  <ThemedText type="h2" style={{ color: colors.success }}>
+                    {stats.totalFasts}
+                  </ThemedText>
+                  <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                    Completed
+                  </ThemedText>
+                </GlassCard>
+                <GlassCard style={styles.statBox} intensity="light">
+                  <View style={[styles.statIconBg, { backgroundColor: colors.secondary + "18" }]}>
+                    <Feather name="zap" size={22} color={colors.secondary} />
+                  </View>
+                  <ThemedText type="h2" style={{ color: colors.secondary }}>
+                    {stats.currentStreak}d
+                  </ThemedText>
+                  <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                    Current Streak
+                  </ThemedText>
+                </GlassCard>
+                <GlassCard style={styles.statBox} intensity="light">
+                  <View style={[styles.statIconBg, { backgroundColor: "#F59E0B18" }]}>
+                    <Feather name="award" size={22} color="#F59E0B" />
+                  </View>
+                  <ThemedText type="h2" style={{ color: "#F59E0B" }}>
+                    {stats.longestStreak}d
+                  </ThemedText>
+                  <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                    Best Streak
+                  </ThemedText>
+                </GlassCard>
+              </View>
+            </View>
+
+            <View style={styles.insightsList}>
+              <View style={styles.sectionHeader}>
+                <View style={[styles.sectionIcon, { backgroundColor: colors.primary + "18" }]}>
+                  <Feather name="compass" size={18} color={colors.primary} />
+                </View>
+                <View>
+                  <ThemedText type="h3">Personalized Insights</ThemedText>
+                  <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                    Based on your patterns
+                  </ThemedText>
+                </View>
+              </View>
+              {insights.map((insight, index) => (
+                <InsightCard key={index} {...insight} />
               ))}
             </View>
           </View>
-
-          <View style={styles.summaryRow}>
-            <View style={[styles.summaryCard, { backgroundColor: theme.backgroundDefault }]}>
-              <ThemedText type="h3" style={{ color: theme.primary }}>
-                {filteredFasts.length}
-              </ThemedText>
-              <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                Fasts
-              </ThemedText>
-            </View>
-            <View style={[styles.summaryCard, { backgroundColor: theme.backgroundDefault }]}>
-              <ThemedText type="h3" style={{ color: Colors.light.success }}>
-                {formatTotalHours(
-                  filteredFasts.reduce((sum, f) => sum + (f.endTime! - f.startTime) / (1000 * 60 * 60), 0)
-                )}
-              </ThemedText>
-              <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                Total Hours
-              </ThemedText>
-            </View>
-            <View style={[styles.summaryCard, { backgroundColor: theme.backgroundDefault }]}>
-              <ThemedText type="h3" style={{ color: Colors.light.secondary }}>
-                {filteredFasts.length > 0
-                  ? Math.round(
-                      filteredFasts.reduce((sum, f) => sum + (f.endTime! - f.startTime) / (1000 * 60 * 60), 0) /
-                        filteredFasts.length
-                    )
-                  : 0}h
-              </ThemedText>
-              <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                Average
-              </ThemedText>
-            </View>
-          </View>
-
-          <View style={styles.fastsList}>
-            {filteredFasts.length === 0 ? (
-              <View style={[styles.emptyState, { backgroundColor: theme.backgroundDefault }]}>
-                <Feather name="calendar" size={40} color={theme.textSecondary} />
-                <ThemedText type="body" style={{ color: theme.textSecondary }}>
-                  No fasts yet
-                </ThemedText>
-                <ThemedText type="small" style={{ color: theme.textSecondary, textAlign: "center" }}>
-                  Start your first fast to see your history here
-                </ThemedText>
-              </View>
-            ) : (
-              filteredFasts.map((fast) => (
-                <FastDetailCard
-                  key={fast.id}
-                  date={new Date(fast.endTime!)}
-                  duration={(fast.endTime! - fast.startTime) / (1000 * 60 * 60)}
-                  targetDuration={fast.targetDuration}
-                  planName={fast.planName}
-                  note={fast.note}
-                />
-              ))
-            )}
-          </View>
-        </>
-      ) : null}
-
-      {viewType === "insights" ? (
-        <View style={styles.insightsSection}>
-          <View style={styles.lifetimeStats}>
-            <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.md }}>
-              Lifetime Statistics
-            </ThemedText>
-            <View style={styles.statGrid}>
-              <View style={[styles.statBox, { backgroundColor: theme.backgroundDefault }]}>
-                <Feather name="clock" size={24} color={Colors.light.primary} />
-                <ThemedText type="h3">{formatTotalHours(stats.totalHours)}</ThemedText>
-                <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                  Total Fasted
-                </ThemedText>
-              </View>
-              <View style={[styles.statBox, { backgroundColor: theme.backgroundDefault }]}>
-                <Feather name="check-circle" size={24} color={Colors.light.success} />
-                <ThemedText type="h3">{stats.totalFasts}</ThemedText>
-                <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                  Completed
-                </ThemedText>
-              </View>
-              <View style={[styles.statBox, { backgroundColor: theme.backgroundDefault }]}>
-                <Feather name="zap" size={24} color={Colors.light.secondary} />
-                <ThemedText type="h3">{stats.currentStreak}d</ThemedText>
-                <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                  Current Streak
-                </ThemedText>
-              </View>
-              <View style={[styles.statBox, { backgroundColor: theme.backgroundDefault }]}>
-                <Feather name="award" size={24} color="#F59E0B" />
-                <ThemedText type="h3">{stats.longestStreak}d</ThemedText>
-                <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                  Best Streak
-                </ThemedText>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.insightsList}>
-            <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.md }}>
-              Personalized Insights
-            </ThemedText>
-            {insights.map((insight, index) => (
-              <InsightCard key={index} {...insight} />
-            ))}
-          </View>
-        </View>
-      ) : null}
-    </ScrollView>
+        ) : null}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: Spacing.lg,
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: Spacing.xl,
     gap: Spacing.lg,
+  },
+  header: {
+    gap: Spacing.xs,
   },
   viewTabs: {
     flexDirection: "row",
-    borderRadius: BorderRadius.md,
     padding: Spacing.xs,
   },
   viewTab: {
@@ -487,7 +595,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: Spacing.xs,
     paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.sm,
+    borderRadius: BorderRadius.md,
   },
   analyticsRow: {
     flexDirection: "row",
@@ -496,33 +604,33 @@ const styles = StyleSheet.create({
   analyticsHalf: {
     flex: 1,
   },
-  calendarCard: {
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    gap: Spacing.md,
-  },
   calendarHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: Spacing.lg,
   },
   monthNav: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.md,
   },
-  filterContainer: {
+  monthNavButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
+    justifyContent: "center",
   },
   filterTabs: {
     flexDirection: "row",
-    borderRadius: BorderRadius.sm,
     padding: Spacing.xs,
   },
   filterTab: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.xs,
+    flex: 1,
+    paddingVertical: Spacing.md,
+    alignItems: "center",
+    borderRadius: BorderRadius.md,
   },
   summaryRow: {
     flexDirection: "row",
@@ -531,24 +639,40 @@ const styles = StyleSheet.create({
   summaryCard: {
     flex: 1,
     alignItems: "center",
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.md,
     gap: Spacing.xs,
   },
   fastsList: {
     gap: Spacing.md,
   },
   emptyState: {
-    padding: Spacing["3xl"],
-    borderRadius: BorderRadius.lg,
     alignItems: "center",
     gap: Spacing.md,
+    paddingVertical: Spacing["3xl"],
+  },
+  emptyIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: "center",
+    justifyContent: "center",
   },
   insightsSection: {
     gap: Spacing.xl,
   },
   lifetimeStats: {
-    gap: Spacing.sm,
+    gap: Spacing.lg,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
+  },
+  sectionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.sm,
+    alignItems: "center",
+    justifyContent: "center",
   },
   statGrid: {
     flexDirection: "row",
@@ -558,11 +682,16 @@ const styles = StyleSheet.create({
   statBox: {
     width: "48%",
     alignItems: "center",
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.md,
     gap: Spacing.sm,
   },
+  statIconBg: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   insightsList: {
-    gap: Spacing.sm,
+    gap: Spacing.md,
   },
 });

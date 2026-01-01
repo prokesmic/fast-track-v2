@@ -10,8 +10,9 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 import { ThemedText } from "@/components/ThemedText";
+import { GlassCard } from "@/components/GlassCard";
 import { useTheme } from "@/hooks/useTheme";
-import { Spacing, BorderRadius, Colors } from "@/constants/theme";
+import { Spacing, BorderRadius, Colors, Shadows } from "@/constants/theme";
 
 export type FastingStageType = 
   | "feeding"
@@ -92,18 +93,26 @@ export function FastingStageIndicator({
   hoursElapsed,
   compact = false,
 }: FastingStageIndicatorProps) {
-  const { theme, colorScheme } = useTheme();
-  const colors = Colors[colorScheme];
+  const { theme } = useTheme();
   const currentStage = getCurrentStage(hoursElapsed);
   const stageInfo = FASTING_STAGES[currentStage];
   
   const pulseAnim = useSharedValue(1);
+  const glowAnim = useSharedValue(0.3);
 
   React.useEffect(() => {
     pulseAnim.value = withRepeat(
       withSequence(
-        withTiming(1.05, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+        withTiming(1.08, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+    glowAnim.value = withRepeat(
+      withSequence(
+        withTiming(0.6, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.2, { duration: 1500, easing: Easing.inOut(Easing.ease) })
       ),
       -1,
       true
@@ -114,11 +123,15 @@ export function FastingStageIndicator({
     transform: [{ scale: pulseAnim.value }],
   }));
 
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: glowAnim.value,
+  }));
+
   if (compact) {
     return (
-      <View style={[styles.compactContainer, { backgroundColor: stageInfo.color + "15" }]}>
+      <View style={[styles.compactContainer, { backgroundColor: stageInfo.color + "18" }]}>
         <Feather name={stageInfo.icon} size={14} color={stageInfo.color} />
-        <ThemedText type="small" style={{ color: stageInfo.color, fontWeight: "600" }}>
+        <ThemedText type="caption" style={{ color: stageInfo.color, fontWeight: "700" }}>
           {stageInfo.name}
         </ThemedText>
       </View>
@@ -126,23 +139,32 @@ export function FastingStageIndicator({
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundDefault }]}>
-      <View style={styles.leftSection}>
-        <Animated.View 
-          style={[
-            styles.iconContainer, 
-            { backgroundColor: stageInfo.color + "15" },
-            pulseStyle,
-          ]}
-        >
-          <Feather name={stageInfo.icon} size={24} color={stageInfo.color} />
-        </Animated.View>
+    <GlassCard accentColor={stageInfo.color}>
+      <View style={styles.content}>
+        <View style={styles.iconSection}>
+          <Animated.View 
+            pointerEvents="none"
+            style={[
+              styles.iconGlow, 
+              { backgroundColor: stageInfo.color },
+              glowStyle,
+            ]} 
+          />
+          <Animated.View 
+            style={[
+              styles.iconContainer, 
+              { backgroundColor: stageInfo.color },
+              Shadows.coloredLg(stageInfo.color),
+              pulseStyle,
+            ]}
+          >
+            <Feather name={stageInfo.icon} size={26} color="#FFFFFF" />
+          </Animated.View>
+        </View>
         <View style={styles.textContainer}>
-          <View style={styles.stageLabel}>
-            <ThemedText type="caption" style={{ color: theme.textSecondary }}>
-              CURRENT STAGE
-            </ThemedText>
-          </View>
+          <ThemedText type="caption" style={{ color: theme.textSecondary, textTransform: "uppercase" }}>
+            Current Stage
+          </ThemedText>
           <ThemedText type="h4" style={{ color: stageInfo.color }}>
             {stageInfo.name}
           </ThemedText>
@@ -150,29 +172,15 @@ export function FastingStageIndicator({
             {stageInfo.description}
           </ThemedText>
         </View>
+        <View style={[styles.chevronContainer, { backgroundColor: stageInfo.color + "15" }]}>
+          <Feather name="chevron-right" size={20} color={stageInfo.color} />
+        </View>
       </View>
-      <View style={[styles.chevronContainer, { backgroundColor: theme.backgroundSecondary }]}>
-        <Feather name="chevron-right" size={20} color={theme.textSecondary} />
-      </View>
-    </View>
+    </GlassCard>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.xl,
-    gap: Spacing.md,
-  },
-  leftSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.md,
-    flex: 1,
-  },
   compactContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -181,19 +189,33 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
     gap: Spacing.xs,
   },
+  content: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
+  },
+  iconSection: {
+    width: 56,
+    height: 56,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconGlow: {
+    position: "absolute",
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
   iconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: BorderRadius.md,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
   },
   textContainer: {
     flex: 1,
     gap: 2,
-  },
-  stageLabel: {
-    marginBottom: 2,
   },
   chevronContainer: {
     width: 36,

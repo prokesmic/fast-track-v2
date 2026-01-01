@@ -1,137 +1,181 @@
-# Fasting App - Design Guidelines
+# Fasting App - Premium Design Guidelines
 
 ## Authentication & User Profile
-- **No authentication required** - local-first personal utility app
-- Include **Profile/Settings screen** with:
-  - User-customizable avatar (generate 3 calming, wellness-themed preset avatars: lotus, zen stones, peaceful moon)
+- **No authentication required** - local-first personal wellness app
+- **Profile/Settings screen** with:
+  - User-customizable avatar (generate 3 luxury wellness avatars: ethereal lotus, zen stones with glow, luminous moon)
   - Display name field
-  - Preferences: theme toggle (light/dark), notification settings, weight unit (lbs/kg)
+  - Preferences: theme (system/light/dark), notifications, weight units (lbs/kg)
 
 ## Navigation Architecture
 **Tab Bar Navigation** (4 tabs + floating action)
-1. **Home** - Active fasting timer and quick stats
-2. **Plans** - Preset and custom fasting schedules
-3. **History** - Calendar view and past fasts
-4. **Profile** - Settings, stats, and preferences
+1. **Home** - Active fast with animated progress
+2. **Plans** - Preset fasting schedules
+3. **History** - Calendar and analytics
+4. **Profile** - Settings and lifetime stats
 
-**Floating Action Button (FAB)** - Center of screen bottom: "Start Fast" (primary action, visible when no fast is active)
+**Floating Action Button**: 64×64pt glass-morphic circle, gradient fill (teal→purple), centered bottom, visible when no fast is active, pulsing glow animation
+
+**Tab Bar Design**: Frosted glass background with blur, floating 16pt above screen bottom, 80pt height, pill-shaped (24pt corner radius), icons with gradient fill on active state
 
 ## Screen Specifications
 
 ### Home Screen
-- **Purpose**: Monitor active fast, see progress
+- **Purpose**: Monitor active fast with immersive visuals
 - **Layout**:
-  - Transparent header, no buttons
-  - Non-scrollable main content
-  - Safe area: top = headerHeight + Spacing.xl, bottom = tabBarHeight + Spacing.xl
+  - No header (full-screen canvas)
+  - Non-scrollable
+  - Animated mesh gradient background (teal→purple→pink, slow 30s loop)
+  - Safe area: top = insets.top + Spacing.xl, bottom = tabBarHeight + 32pt
 - **Components**:
-  - Large circular progress ring showing elapsed/remaining time
-  - Current fast type label (e.g., "16:8 Intermission")
-  - Time remaining (hours:minutes)
-  - Target end time
-  - "End Fast Early" button (destructive, requires confirmation)
-  - Quick stats cards: current streak, longest streak, total fasts completed
+  - Massive circular progress ring (280pt diameter):
+    - 16pt stroke width, rounded caps
+    - Gradient stroke (teal→purple)
+    - Outer glow effect (8pt radius, 0.4 opacity, gradient color)
+    - Smooth per-second animation
+    - Inner text: elapsed time (72pt, bold, gradient text)
+  - Below ring: Fast type label (20pt semibold) + target end time (16pt, secondary color)
+  - Floating glass card (bottom third): Current streak counter, total hours fasted, with subtle shimmer animation
+  - "End Fast" button: Glass-morphic, destructive red accent, requires confirmation alert
 
 ### Plans Screen
-- **Purpose**: Browse and select fasting schedules
+- **Purpose**: Browse premium fasting schedules
 - **Layout**:
-  - Default header with title "Fasting Plans"
-  - Scrollable list
-  - Safe area: top = Spacing.xl, bottom = tabBarHeight + Spacing.xl
+  - Transparent header with "Fasting Plans" (32pt bold)
+  - Scrollable vertical stack
+  - Gradient background (lighter than Home, teal→purple subtle)
+  - Safe area: top = headerHeight + Spacing.xl, bottom = tabBarHeight + 32pt
 - **Components**:
-  - Popular plans section: cards for 16:8, 18:6, 20:4, OMAD (One Meal A Day), 5:2, Custom
-  - Each card shows: plan name, description, difficulty badge, "Start" button
-  - Tapping card opens detail modal with benefits and schedule visualization
+  - Plan cards (glass-morphic design):
+    - Frosted background, 1pt white/15% border
+    - 20pt corner radius
+    - Floating shadow: {width: 0, height: 8, opacity: 0.15, radius: 16}
+    - Gradient accent bar (left edge, 4pt width)
+    - Plan name (24pt bold), description (16pt), difficulty badge (gradient pill)
+    - "Start" button (gradient fill, white text, 48pt height)
+  - Hover/press: Scale to 0.98, increase glow
+  - Popular plans: 16:8, 18:6, 20:4, OMAD, 5:2, Custom
+  - Tapping opens full-screen modal with benefits, schedule visualization (timeline graphic)
 
 ### History Screen
-- **Purpose**: View past fasting sessions and trends
+- **Purpose**: View progress and trends with data visualization
 - **Layout**:
-  - Default header with title "History"
-  - Scrollable content
-  - Safe area: top = Spacing.xl, bottom = tabBarHeight + Spacing.xl
+  - Transparent header: "History" (32pt bold), right button: filter icon
+  - Scrollable
+  - Subtle gradient background
+  - Safe area: top = headerHeight + Spacing.xl, bottom = tabBarHeight + 32pt
 - **Components**:
-  - Calendar heatmap (current month) - cells colored by fast completion
-  - Filter toggle: Week/Month/All Time
-  - List of completed fasts: date, duration, fast type, success indicator
+  - Calendar heatmap (glass card):
+    - 7×5 grid, cells 44×44pt
+    - Gradient intensity based on fast completion (transparent→teal→purple)
+    - 8pt corner radius per cell, 4pt gap
+    - Animated fade-in when scrolled into view
+  - Stats overview cards (horizontal scroll):
+    - Average fast duration, completion rate, best streak
+    - Glass-morphic, gradient accent icons
+  - Completed fasts list:
+    - Glass cards with gradient left accent
+    - Date, duration, type, success checkmark (animated)
 
 ### Profile Screen
-- **Purpose**: Settings, lifetime stats, personalization
+- **Purpose**: Personalization and settings
 - **Layout**:
   - Transparent header, right button: "Edit"
   - Scrollable form
-  - Safe area: top = headerHeight + Spacing.xl, bottom = tabBarHeight + Spacing.xl
+  - Gradient background (purple→pink subtle)
+  - Safe area: top = headerHeight + Spacing.xl, bottom = tabBarHeight + 32pt
 - **Components**:
-  - Avatar picker (3 preset wellness-themed avatars)
-  - Display name field
-  - Lifetime stats cards: total hours fasted, total fasts, current streak
-  - Settings sections:
-    - Notifications (fast start/end reminders)
-    - Theme (system/light/dark)
-    - Weight tracking toggle
-    - Units (imperial/metric)
-    - About & Privacy Policy links
+  - Hero section: Large avatar (120pt circle, gradient border 3pt), display name (28pt bold)
+  - Lifetime stats (glass card grid):
+    - Total hours fasted, total fasts, current streak
+    - Large gradient numbers (48pt bold), labels (14pt)
+    - Subtle counting animation on load
+  - Settings sections (glass cards):
+    - Notifications, Theme, Weight tracking, Units
+    - Toggle switches with gradient active state
+    - Chevron navigation for nested screens
+  - About & Privacy (text links, purple gradient)
 
-### Start Fast Modal (Native Modal)
-- **Purpose**: Configure and begin a new fast
+### Start Fast Modal
+- **Purpose**: Configure new fast with elegant controls
 - **Layout**:
-  - Custom header with "Cancel" (left) and "Start" (right)
+  - Full-screen modal, gradient background (teal→purple)
+  - Custom header: "Cancel" (left, white), "Start Fast" (right, bold white)
   - Scrollable form
   - Safe area: top = insets.top + Spacing.xl, bottom = insets.bottom + Spacing.xl
 - **Components**:
-  - Fast type selector (16:8, 18:6, custom)
-  - Start time picker (default: now)
-  - End time (auto-calculated, editable)
-  - Optional: add note field
-  - Submit in header
+  - Fast type selector: Horizontal scrolling glass pills, gradient fill on selected
+  - Time pickers: Glass-morphic wheels, white text, gradient underline
+  - Duration preview: Large animated countdown (56pt bold)
+  - Optional note field: Glass input with frosted background
+  - Haptic feedback on all interactions
 
-## Design System
+## Premium Design System
 
 ### Color Palette
-- **Primary**: Calming teal (#2DD4BF) - progress, active states
-- **Secondary**: Soft purple (#A78BFA) - accents, badges
-- **Success**: Green (#10B981) - completed fasts
-- **Destructive**: Red (#EF4444) - end fast early
-- **Background (Light)**: White (#FFFFFF)
-- **Background (Dark)**: Deep navy (#0F172A)
-- **Surface**: Light gray (#F8FAFC) / Dark surface (#1E293B)
-- **Text Primary**: #0F172A / #F1F5F9
-- **Text Secondary**: #64748B / #94A3B8
+- **Primary Gradient**: Teal (#2DD4BF) → Purple (#A78BFA) → Pink (#EC4899)
+- **Glass Overlay**: White 10% with 20pt blur (light), Black 15% with 24pt blur (dark)
+- **Accents**: 
+  - Success: Mint green (#10B981) with glow
+  - Destructive: Coral red (#EF4444) with glow
+- **Backgrounds**:
+  - Light: Animated mesh gradient (white → teal 5% → purple 5%)
+  - Dark: Deep gradient (navy #0F172A → purple 10% → black)
+- **Text**: Pure black (#000000) / Pure white (#FFFFFF), gradient text for emphasis
+- **Shadows**: Multi-layer (small sharp + large soft for depth)
 
 ### Typography
-- **Headers**: SF Pro Display, 28pt bold
+- **Display**: SF Pro Display, 72pt bold (timers, hero numbers)
+- **Headers**: SF Pro Display, 32pt bold
 - **Subheaders**: SF Pro Text, 20pt semibold
 - **Body**: SF Pro Text, 16pt regular
-- **Captions**: SF Pro Text, 14pt regular
-- **Timer Display**: SF Pro Rounded, 48pt bold (monospaced for stability)
+- **Captions**: SF Pro Text, 14pt medium
+- **Gradient text** for primary headings and key numbers
 
 ### Visual Design
-- **Icons**: System SF Symbols (timer, calendar, person, chart)
-- **Progress Ring**: 12pt stroke, rounded caps, gradient (primary to secondary)
-- **Cards**: 16pt corner radius, subtle surface elevation (no shadow on light, slight glow on dark)
-- **FAB**: 60×60pt circle, primary color, system icon "plus", floating shadow:
-  - shadowOffset: {width: 0, height: 2}
-  - shadowOpacity: 0.10
-  - shadowRadius: 2
-- **Buttons**: 48pt height, rounded corners (12pt), haptic feedback on press
-- **Calendar Cells**: 40×40pt, 8pt corner radius, opacity-based intensity for heatmap
+- **Glass Morphism**: All cards use frosted glass effect with:
+  - Background blur (20-24pt)
+  - White 10-15% overlay (light mode) or Black 15-20% (dark)
+  - 1pt white/15% border
+  - Floating shadows: {width: 0, height: 8, opacity: 0.15, radius: 16}
+- **Progress Ring**: 
+  - Gradient stroke with outer glow (8pt radius, animated pulse every 2s)
+  - Inner gradient fill for background track (5% opacity)
+- **Buttons**:
+  - Primary: Gradient fill (teal→purple), 48pt height, 16pt corner radius
+  - Secondary: Glass background, gradient border
+  - Press state: Scale 0.96, haptic medium impact
+- **FAB**: Glass circle, gradient fill, white icon, continuous pulsing glow, shadow:
+  - shadowOffset: {width: 0, height: 4}
+  - shadowOpacity: 0.25
+  - shadowRadius: 12
+- **Icons**: SF Symbols, gradient fill for active states, 24pt default size
+- **Animations**:
+  - Page transitions: Smooth slide with fade (300ms)
+  - Card entries: Staggered fade-up (100ms delay between items)
+  - Progress updates: Smooth spring animation
+  - Success states: Scale pulse + gradient shimmer
 
 ### Critical Assets
-1. **3 Preset Avatars** (wellness theme):
-   - Lotus flower illustration (peaceful pink/purple gradient)
-   - Zen stones stack (earth tones, balanced)
-   - Crescent moon (soft blue/white, night theme)
-2. **Empty State Illustration**: Minimalist clock with gentle motion lines (for first-time Home screen)
+1. **3 Luxury Avatars**:
+   - Ethereal lotus (gradient pink→purple with glow)
+   - Zen stones (gradient earth tones with golden highlights)
+   - Luminous moon (gradient blue→white with halo)
+   All with transparent backgrounds, subtle glow effects
+2. **Empty State**: Minimalist gradient clock icon with floating particles
 
-### Interaction Design
-- Fast completion triggers celebratory haptic pattern + subtle confetti animation
-- Circular progress ring smoothly animates every minute
-- All touchables have 0.7 opacity press state
-- Calendar cells pulse gently when tapped
-- Modal presentations use default iOS sheet style with detents
+### Interaction & Animation
+- **Micro-interactions**: All touchables scale to 0.96 on press with haptic feedback
+- **Progress ring**: Updates every second with smooth spring animation, pulses every 2s
+- **Fast completion**: Radial gradient burst animation, haptic success pattern, confetti particles
+- **Background**: Animated mesh gradient continuously shifts (30s loop)
+- **Cards**: Parallax effect on scroll (subtle 3D depth)
+- **Transitions**: Modal presentations use custom gradient fade
 
 ### Accessibility
-- Dynamic Type support for all text
-- VoiceOver labels for timer ("12 hours 30 minutes remaining")
-- High contrast mode support for progress indicators
+- Dynamic Type support (all text scales)
+- VoiceOver: Descriptive labels ("12 hours 30 minutes remaining of 16 hour fast")
+- Reduce Motion: Disable mesh animation, simplify transitions
+- High Contrast: Increase border opacity to 40%, reduce transparency
+- Color-independent indicators (icons + labels for all states)
 - Minimum touch target: 44×44pt
-- Color is never the only indicator (use icons + text for states)
