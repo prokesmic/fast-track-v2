@@ -212,7 +212,14 @@ export default function HomeScreen() {
       >
         <View style={styles.timerSection}>
           <Animated.View style={[styles.timerWrapper, pulseStyle]}>
-            <ProgressRing progress={progress} size={240} strokeWidth={14}>
+            <ProgressRing
+              progress={progress}
+              size={240}
+              strokeWidth={14}
+              targetHours={activeFast?.targetDuration || 16}
+              elapsedHours={elapsedHours}
+              showMilestones={!!activeFast}
+            >
               <View style={styles.timerContent}>
                 {activeFast ? (
                   <>
