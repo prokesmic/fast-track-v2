@@ -16,7 +16,7 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 
 import { ThemedText } from "@/components/ThemedText";
-import { ProgressRing } from "@/components/ProgressRing";
+import { ProgressRing, Milestone } from "@/components/ProgressRing";
 import { FastingStageIndicator } from "@/components/FastingStage";
 import { FAB } from "@/components/FAB";
 import { useTheme } from "@/hooks/useTheme";
@@ -219,6 +219,20 @@ export default function HomeScreen() {
               targetHours={activeFast?.targetDuration || 16}
               elapsedHours={elapsedHours}
               showMilestones={!!activeFast}
+              onMilestonePress={(milestone: Milestone) => {
+                if (Platform.OS === "web") {
+                  window.alert(`${milestone.name} (${milestone.hours}h)\n\n${milestone.description}`);
+                } else {
+                  Alert.alert(
+                    `${milestone.name}`,
+                    `Reached at ${milestone.hours} hours\n\n${milestone.description}`,
+                    [
+                      { text: "Learn More", onPress: () => navigation.navigate("FastingStages", { hoursElapsed: milestone.hours }) },
+                      { text: "OK", style: "cancel" }
+                    ]
+                  );
+                }
+              }}
             >
               <View style={styles.timerContent}>
                 {activeFast ? (

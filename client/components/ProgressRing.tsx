@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Pressable } from "react-native";
 import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
 import Animated, {
   useAnimatedProps,
@@ -9,24 +9,27 @@ import Animated, {
 import { useTheme } from "@/hooks/useTheme";
 import { Colors } from "@/constants/theme";
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-interface Milestone {
+export interface Milestone {
+  hours: number;
   icon: string;
   color: string;
-  hours: number;
+  name: string;
+  description: string;
 }
 
-const FASTING_MILESTONES: Milestone[] = [
-  { icon: "droplet", color: "#3B82F6", hours: 0 },
-  { icon: "zap", color: "#F59E0B", hours: 12 },
-  { icon: "activity", color: Colors.light.primary, hours: 14 },
-  { icon: "thermometer", color: "#EF4444", hours: 16 },
-  { icon: "settings", color: "#6B7280", hours: 18 },
-  { icon: "edit-3", color: "#8B5CF6", hours: 20 },
-  { icon: "refresh-cw", color: "#06B6D4", hours: 24 },
-  { icon: "shield", color: Colors.light.success, hours: 48 },
+export const RING_MILESTONES: Milestone[] = [
+  { hours: 2, icon: "trending-down", color: "#F97316", name: "Blood Sugar Drop", description: "Blood sugar levels decline, triggering glycogen release" },
+  { hours: 5, icon: "battery", color: "#EAB308", name: "Glycogen Depletion", description: "Liver glycogen stores begin to empty" },
+  { hours: 8, icon: "moon", color: "#8B5CF6", name: "Fasting State", description: "Body enters true fasting mode" },
+  { hours: 12, icon: "zap", color: "#F59E0B", name: "Fat Burning", description: "Fat becomes primary energy source" },
+  { hours: 18, icon: "thermometer", color: "#EF4444", name: "Ketosis", description: "Ketone production increases significantly" },
+  { hours: 24, icon: "refresh-cw", color: "#8B5CF6", name: "Autophagy", description: "Cellular cleanup and repair begins" },
+  { hours: 48, icon: "arrow-up-circle", color: "#06B6D4", name: "Growth Hormone", description: "Growth hormone levels surge" },
+  { hours: 72, icon: "shield", color: Colors.light.success, name: "Immune Reset", description: "Immune system regeneration begins" },
 ];
 
 interface ProgressRingProps {
@@ -37,6 +40,7 @@ interface ProgressRingProps {
   targetHours?: number;
   elapsedHours?: number;
   showMilestones?: boolean;
+  onMilestonePress?: (milestone: Milestone) => void;
 }
 
 export function ProgressRing({
@@ -47,6 +51,7 @@ export function ProgressRing({
   targetHours = 16,
   elapsedHours = 0,
   showMilestones = false,
+  onMilestonePress,
 }: ProgressRingProps) {
   const { theme, isDark } = useTheme();
   const radius = (size - strokeWidth) / 2;
@@ -63,9 +68,10 @@ export function ProgressRing({
     };
   }, [progress, circumference]);
 
-  const getMilestonePosition = (index: number, total: number) => {
-    const angleStep = 360 / total;
-    const angle = index * angleStep - 90;
+  const getMilestonePosition = (hours: number) => {
+    const maxHours = Math.max(targetHours, 72);
+    const progressFraction = Math.min(hours / maxHours, 1);
+    const angle = progressFraction * 360 - 90;
     const radian = (angle * Math.PI) / 180;
     const centerX = size / 2 + 30;
     const centerY = size / 2 + 30;
@@ -73,6 +79,15 @@ export function ProgressRing({
       x: centerX + milestoneRadius * Math.cos(radian),
       y: centerY + milestoneRadius * Math.sin(radian),
     };
+  };
+
+  const visibleMilestones = showMilestones
+    ? RING_MILESTONES.filter((m) => m.hours <= Math.max(targetHours, 72))
+    : [];
+
+  const handleMilestonePress = (milestone: Milestone) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onMilestonePress?.(milestone);
   };
 
   return (
@@ -109,13 +124,14 @@ export function ProgressRing({
         <View style={styles.content}>{children}</View>
       </View>
 
-      {showMilestones && FASTING_MILESTONES.map((milestone, index) => {
-        const pos = getMilestonePosition(index, FASTING_MILESTONES.length);
+      {visibleMilestones.map((milestone) => {
+        const pos = getMilestonePosition(milestone.hours);
         const isPassed = elapsedHours >= milestone.hours;
 
         return (
-          <View
-            key={index}
+          <Pressable
+            key={milestone.hours}
+            onPress={() => handleMilestonePress(milestone)}
             style={[
               styles.milestone,
               {
@@ -123,13 +139,14 @@ export function ProgressRing({
                 top: pos.y - 14,
               },
             ]}
+            hitSlop={8}
           >
             <Feather
               name={milestone.icon as any}
               size={20}
               color={isPassed ? milestone.color : "#9CA3AF"}
             />
-          </View>
+          </Pressable>
         );
       })}
     </View>
