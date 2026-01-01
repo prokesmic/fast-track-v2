@@ -275,7 +275,7 @@ export default function StartFastModal() {
             value={customHours}
             onChange={setCustomHours}
             min={8}
-            max={36}
+            max={96}
           />
         </View>
       ) : selectedPlan ? (
