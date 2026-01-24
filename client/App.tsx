@@ -14,18 +14,31 @@ import RootStackNavigator from "@/navigation/RootStackNavigator";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/context/ThemeContext";
 
+import { useFonts } from "expo-font";
+import { Feather } from "@expo/vector-icons";
+
 // Prevent auto-hiding the splash screen until we're ready
 SplashScreen.preventAutoHideAsync().catch(() => { });
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    ...Feather.font,
+  });
+
   // Hide splash screen when the app mounts and renders
   React.useEffect(() => {
-    // Small delay to ensure layout is ready
-    const timer = setTimeout(() => {
-      SplashScreen.hideAsync().catch(() => { });
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+    if (fontsLoaded) {
+      // Small delay to ensure layout is ready
+      const timer = setTimeout(() => {
+        SplashScreen.hideAsync().catch(() => { });
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
     <ErrorBoundary>
