@@ -22,7 +22,8 @@ SplashScreen.preventAutoHideAsync().catch(() => { });
 
 export default function App() {
   const [fontsLoaded] = useFonts({
-    ...Feather.font,
+    // Explicitly load Feather font to ensure the name matches what the Icon component expects
+    Feather: require("@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ttf"),
   });
 
   // Hide splash screen when the app mounts and renders

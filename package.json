@@ -6,6 +6,7 @@
     "start": "npx expo start",
     "start:tunnel": "npx expo start --tunnel --clear",
     "start:clear": "npx expo start --clear",
+    "deploy": "npx expo export -p web && cd dist && vercel --prod --yes",
     "android": "npx expo start --android",
     "ios": "npx expo start --ios",
     "web": "npx expo start --web",
