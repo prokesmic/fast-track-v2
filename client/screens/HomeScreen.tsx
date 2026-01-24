@@ -359,12 +359,10 @@ export default function HomeScreen() {
       <View style={[styles.safeArea, { paddingTop: insets.top + Spacing.lg }]}>
         <View style={styles.header}>
           <View>
-            <ThemedText type="caption" style={{ color: theme.textSecondary, textTransform: "uppercase" }}>
-              {getGreeting()}
+            <ThemedText style={styles.greeting}>
+              {greeting}
             </ThemedText>
-            <ThemedText type="h1" style={[styles.appTitle, { fontSize: 24 }]}>
-              FastTrack
-            </ThemedText>
+            <ThemedText style={styles.title}>FastTrack <ThemedText style={{ fontSize: 12, opacity: 0.5 }}>(v2.4 FINAL)</ThemedText></ThemedText>
           </View>
           {stats.currentStreak > 0 ? (
             <View style={[styles.streakBadge, { backgroundColor: colors.primary + "18" }]}>

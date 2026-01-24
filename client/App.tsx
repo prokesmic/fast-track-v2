@@ -17,32 +17,36 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { useFonts } from "expo-font";
 import { Feather } from "@expo/vector-icons";
 
+import { WebFontFix } from "@/components/WebFontFix";
+
 // Prevent auto-hiding the splash screen until we're ready
 SplashScreen.preventAutoHideAsync().catch(() => { });
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
-    // Explicitly load Feather font to ensure the name matches what the Icon component expects
-    Feather: require("@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ttf"),
+  const [fontsLoaded, error] = useFonts({
+    ...Feather.font,
   });
 
-  // Hide splash screen when the app mounts and renders
   React.useEffect(() => {
-    if (fontsLoaded) {
-      // Small delay to ensure layout is ready
-      const timer = setTimeout(() => {
-        SplashScreen.hideAsync().catch(() => { });
-      }, 500);
-      return () => clearTimeout(timer);
+    if (error) {
+      console.error("Font loading error:", error);
     }
-  }, [fontsLoaded]);
+  }, [error]);
 
-  if (!fontsLoaded) {
-    return null;
-  }
+  // SAFETY FALLBACK: Hide splash screen after 3 seconds max, even if fonts fail
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => { });
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Removed blocking check: if (!fontsLoaded && !error) return null;
+  // This allows the app to render immediately. The WebFontFix will handle icons.
 
   return (
     <ErrorBoundary>
+      <WebFontFix />
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <SafeAreaProvider>

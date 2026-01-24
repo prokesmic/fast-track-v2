@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Fasting app V2",
+    "name": "FastTrack v2.3",
     "slug": "fasttrack",
     "version": "1.0.2",
     "orientation": "portrait",
@@ -27,7 +27,7 @@
     "web": {
       "output": "single",
       "favicon": "./assets/images/favicon.png",
-      "name": "FastTrack",
+      "name": "FastTrack v2.4",
       "shortName": "FastTrack",
       "description": "Track your fasting journey efficiently.",
       "themeColor": "#2DD4BF",
