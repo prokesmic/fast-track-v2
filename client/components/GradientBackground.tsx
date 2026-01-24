@@ -8,15 +8,25 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 interface GradientBackgroundProps {
   variant?: "home" | "plans" | "history" | "profile" | "modal";
+  stageColor?: string;
 }
 
-export function GradientBackground({ variant = "home" }: GradientBackgroundProps) {
+export function GradientBackground({ variant = "home", stageColor }: GradientBackgroundProps) {
   const { colorScheme } = useTheme();
   const colors = Colors[colorScheme];
 
   const getGradientConfig = () => {
     switch (variant) {
       case "home":
+        if (stageColor) {
+          return {
+            orbs: [
+              { cx: "20%", cy: "15%", r: "45%", color: stageColor, opacity: 0.25 },
+              { cx: "80%", cy: "35%", r: "50%", color: stageColor, opacity: 0.15 },
+              { cx: "50%", cy: "85%", r: "60%", color: colors.gradientStart, opacity: 0.1 },
+            ],
+          };
+        }
         return {
           orbs: [
             { cx: "20%", cy: "15%", r: "45%", color: colors.gradientStart, opacity: 0.25 },

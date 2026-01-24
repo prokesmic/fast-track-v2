@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "FastTrack",
+    "name": "Fasting app V2",
     "slug": "fasttrack",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "fasttrack",
@@ -10,7 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.fasttrack.app"
+      "bundleIdentifier": "com.fasttrack.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -23,7 +26,17 @@
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "name": "FastTrack",
+      "shortName": "FastTrack",
+      "description": "Track your fasting journey efficiently.",
+      "themeColor": "#2DD4BF",
+      "backgroundColor": "#ffffff",
+      "display": "standalone",
+      "startUrl": "/",
+      "dir": "auto",
+      "lang": "en",
+      "preferRelatedApplications": false
     },
     "plugins": [
       [
@@ -42,6 +55,9 @@
     ],
     "experiments": {
       "reactCompiler": true
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
     }
   }
 }

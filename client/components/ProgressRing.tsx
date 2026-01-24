@@ -28,14 +28,12 @@ export interface Milestone {
 }
 
 export const RING_MILESTONES: Milestone[] = [
-  { hours: 2, icon: "trending-down", color: "#F97316", name: "Blood Sugar Drop", description: "Blood sugar levels decline, triggering glycogen release" },
-  { hours: 5, icon: "battery", color: "#EAB308", name: "Glycogen Depletion", description: "Liver glycogen stores begin to empty" },
-  { hours: 8, icon: "moon", color: "#8B5CF6", name: "Fasting State", description: "Body enters true fasting mode" },
-  { hours: 12, icon: "zap", color: "#F59E0B", name: "Fat Burning", description: "Fat becomes primary energy source" },
-  { hours: 18, icon: "thermometer", color: "#EF4444", name: "Ketosis", description: "Ketone production increases significantly" },
-  { hours: 24, icon: "refresh-cw", color: "#8B5CF6", name: "Autophagy", description: "Cellular cleanup and repair begins" },
-  { hours: 48, icon: "arrow-up-circle", color: "#06B6D4", name: "Growth Hormone", description: "Growth hormone levels surge" },
-  { hours: 72, icon: "shield", color: Colors.light.success, name: "Immune Reset", description: "Immune system regeneration begins" },
+  { hours: 4, icon: "trending-down", color: "#34D399", name: "Blood Sugar Fall", description: "Blood sugar normalizes as digestive system rests." },
+  { hours: 8, icon: "sun", color: "#FBBF24", name: "Fat Burning", description: "Body begins to access fat stores for energy." },
+  { hours: 12, icon: "zap", color: "#F87171", name: "Ketosis", description: "Deep fat burning state with ketone production." },
+  { hours: 18, icon: "refresh-cw", color: "#A78BFA", name: "Autophagy", description: "Cellular cleaning and repair mechanisms activate." },
+  { hours: 24, icon: "shield", color: "#818CF8", name: "Deep Autophagy", description: "Peak autophagy and immune regeneration." },
+  { hours: 48, icon: "activity", color: "#F472B6", name: "Growth Hormone", description: "HGH levels peak for deep tissue repair." },
 ];
 
 interface MilestoneIconProps {
@@ -77,13 +75,13 @@ function MilestoneIcon({ milestone, isPassed, x, y, onPress }: MilestoneIconProp
   return (
     <View style={[styles.milestoneContainer, { left: x - 18, top: y - 18 }]}>
       {isPassed ? (
-        <Animated.View 
+        <Animated.View
           pointerEvents="none"
           style={[
-            styles.milestoneGlow, 
+            styles.milestoneGlow,
             { backgroundColor: milestone.color },
             glowStyle,
-          ]} 
+          ]}
         />
       ) : null}
       <AnimatedPressable
@@ -135,7 +133,7 @@ export function ProgressRing({
   const colors = Colors[colorScheme];
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const milestoneRadius = radius + strokeWidth / 2 + 32;
+  const milestoneRadius = radius;
 
   const animatedProps = useAnimatedProps(() => {
     const clampedProgress = Math.min(Math.max(progress, 0), 1);
@@ -148,8 +146,9 @@ export function ProgressRing({
   }, [progress, circumference]);
 
   const getMilestonePosition = (hours: number) => {
-    const maxHours = Math.max(targetHours, 72);
-    const progressFraction = Math.min(hours / maxHours, 1);
+    // If targetHours is very small (unlikely), ensure we don't divide by zero
+    const totalHours = Math.max(targetHours, 1);
+    const progressFraction = Math.min(hours / totalHours, 1);
     const angle = progressFraction * 360 - 90;
     const radian = (angle * Math.PI) / 180;
     const centerX = size / 2 + 36;
@@ -161,7 +160,7 @@ export function ProgressRing({
   };
 
   const visibleMilestones = showMilestones
-    ? RING_MILESTONES.filter((m) => m.hours <= Math.max(targetHours, 72))
+    ? RING_MILESTONES.filter((m) => m.hours <= targetHours)
     : [];
 
   const handleMilestonePress = (milestone: Milestone) => {

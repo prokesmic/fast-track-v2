@@ -17,8 +17,13 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 
 import { ThemedText } from "@/components/ThemedText";
-import { ProgressRing, Milestone } from "@/components/ProgressRing";
-import { FastingStageIndicator } from "@/components/FastingStage";
+import { ProgressRing, Milestone, RING_MILESTONES } from "@/components/ProgressRing";
+import { MetabolicStages } from "@/components/MetabolicStages";
+import { getStageForDuration } from "@/constants/fastingStages";
+import { DailyInsight } from "@/components/DailyInsight";
+import { MotivationCard } from "@/components/MotivationCard";
+import { RecommendationCard } from "@/components/RecommendationCard";
+import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import { FAB } from "@/components/FAB";
 import { GlassCard } from "@/components/GlassCard";
 import { GradientBackground } from "@/components/GradientBackground";
@@ -26,6 +31,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useFasting } from "@/hooks/useFasting";
 import { Spacing, Colors, BorderRadius, Shadows } from "@/constants/theme";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
+import { CustomDateTimePicker } from "@/components/DateTimePicker";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -111,16 +117,50 @@ function StatCard({ icon, iconColor, value, label, colors }: StatCardProps) {
       onPressOut={() => { scale.value = withSpring(1); }}
       style={[styles.statCardWrapper, animatedStyle]}
     >
-      <GlassCard style={styles.statCardGlass}>
-        <View style={[styles.statIconBg, { backgroundColor: iconColor + "20" }]}>
-          <Feather name={icon as any} size={22} color={iconColor} />
+      <GlassCard style={styles.statCardGlass} intensity="medium">
+        {/* Background Icon Watermark */}
+        <View style={{ position: 'absolute', right: -10, bottom: -10, opacity: 0.1 }}>
+          <Feather name={icon as any} size={80} color={iconColor} />
         </View>
-        <ThemedText type="h2" style={styles.statValue}>
-          {value}
-        </ThemedText>
-        <ThemedText type="caption" style={{ color: theme.textSecondary }}>
-          {label}
-        </ThemedText>
+
+        <View style={styles.statContent}>
+          <View style={[styles.statHeader]}>
+            <View style={[styles.statIconSmall, { backgroundColor: iconColor + "20" }]}>
+              <Feather name={icon as any} size={16} color={iconColor} />
+            </View>
+            <ThemedText type="caption" style={{ color: theme.textSecondary, fontWeight: "600", letterSpacing: 0.5 }}>
+              {label.toUpperCase()}
+            </ThemedText>
+          </View>
+
+          <View style={styles.statValueContainer}>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+              {value.split(' ').map((part, index) => {
+                const match = part.match(/(\d+)([a-zA-Z]*)/);
+                if (match) {
+                  const [_, num, unit] = match;
+                  return (
+                    <ThemedText key={index} type="h2" style={{ color: theme.text, fontSize: 32, lineHeight: 38 }}>
+                      {num}
+                      {unit ? (
+                        <ThemedText type="bodyMedium" style={{ color: iconColor, fontWeight: "700" }}>
+                          {unit}
+                        </ThemedText>
+                      ) : null}
+                      {index < value.split(' ').length - 1 ? " " : ""}
+                    </ThemedText>
+                  );
+                }
+                return (
+                  <ThemedText key={index} type="h2" style={{ color: theme.text, fontSize: 32, lineHeight: 38 }}>
+                    {part}
+                    {index < value.split(' ').length - 1 ? " " : ""}
+                  </ThemedText>
+                );
+              })}
+            </View>
+          </View>
+        </View>
       </GlassCard>
     </AnimatedPressable>
   );
@@ -132,11 +172,19 @@ export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { theme, colorScheme } = useTheme();
   const colors = Colors[colorScheme];
-  const { activeFast, endFast, stats, refresh } = useFasting();
+  const { activeFast, endFast, updateFast, stats, refresh, fasts } = useFasting();
   const [elapsed, setElapsed] = useState(0);
 
   const pulseAnim = useSharedValue(1);
   const glowAnim = useSharedValue(0.5);
+  const [isDatePickerVisible, setDatePickerVisible] = useState(false);
+
+  const handleUpdateStartTime = useCallback(async (date: Date) => {
+    setDatePickerVisible(false);
+    if (activeFast) {
+      await updateFast(activeFast.id, { startTime: date.getTime() });
+    }
+  }, [activeFast, updateFast]);
 
   useFocusEffect(
     useCallback(() => {
@@ -227,11 +275,21 @@ export default function HomeScreen() {
     }
   };
 
-  const targetMs = (activeFast?.targetDuration || 0) * 60 * 60 * 1000;
-  const progress = targetMs > 0 ? Math.min(elapsed / targetMs, 1) : 0;
-  const remaining = Math.max(targetMs - elapsed, 0);
-  const time = formatTime(activeFast ? elapsed : 0);
   const elapsedHours = elapsed / (1000 * 60 * 60);
+  const targetHours = activeFast?.targetDuration || 16;
+  const isOvertime = elapsedHours > targetHours;
+
+  // Find next milestone for dynamic ring scaling
+  const nextMilestone = RING_MILESTONES.find(m => m.hours > elapsedHours);
+  const displayDuration = isOvertime
+    ? (nextMilestone ? nextMilestone.hours : Math.ceil(elapsedHours + 4))
+    : targetHours;
+
+  const displayMs = displayDuration * 60 * 60 * 1000;
+  const progress = displayMs > 0 ? Math.min(elapsed / displayMs, 1) : 0;
+
+  const remaining = Math.max(displayMs - elapsed, 0);
+  const time = formatTime(activeFast ? elapsed : 0);
 
   const pulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulseAnim.value }],
@@ -241,17 +299,70 @@ export default function HomeScreen() {
     opacity: glowAnim.value,
   }));
 
+  const currentStage = getStageForDuration(elapsedHours);
+
+  // --- Celebration Logic ---
+  const [showCelebration, setShowCelebration] = useState(false);
+  const hasShownCelebration = React.useRef(false);
+
+  useEffect(() => {
+    if (activeFast && isOvertime && !hasShownCelebration.current) {
+      // Delay slightly to allow UI to settle/load
+      const timer = setTimeout(() => {
+        setShowCelebration(true);
+        hasShownCelebration.current = true;
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeFast, isOvertime]);
+
+  // Reset flag when fast ends/changes
+  useEffect(() => {
+    if (!activeFast) {
+      hasShownCelebration.current = false;
+      setShowCelebration(false);
+    }
+  }, [activeFast]);
+
+  const handleContinueFast = async () => {
+    setShowCelebration(false);
+    if (!activeFast) return;
+
+    // Logic to find next milestone
+    const currentTarget = activeFast.targetDuration;
+    // Common milestones: 16, 18, 20, 24, 36, 48, 72
+    const milestones = [16, 18, 20, 24, 36, 48, 72];
+    const nextTarget = milestones.find(m => m > currentTarget) || currentTarget + 2;
+
+    await updateFast(activeFast.id, { targetDuration: nextTarget });
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert("Goal Updated", `Your fasting goal has been extended to ${nextTarget} hours.`);
+  };
+
+  const extensionMilestone = activeFast ? [16, 18, 20, 24, 36, 48, 72].find(m => m > activeFast.targetDuration) || activeFast.targetDuration + 2 : undefined;
+
   return (
     <View style={styles.container}>
-      <GradientBackground variant="home" />
-      
+      <CelebrationOverlay
+        visible={showCelebration}
+        hoursReached={activeFast?.targetDuration || 16}
+        nextMilestone={extensionMilestone}
+        onEndFast={() => {
+          setShowCelebration(false);
+          // Small delay to allow modal to close before showing generic end fast alert
+          setTimeout(() => handleEndFast(), 300);
+        }}
+        onContinue={handleContinueFast}
+      />
+      <GradientBackground variant="home" stageColor={activeFast ? currentStage.color : undefined} />
+
       <View style={[styles.safeArea, { paddingTop: insets.top + Spacing.lg }]}>
         <View style={styles.header}>
           <View>
             <ThemedText type="caption" style={{ color: theme.textSecondary, textTransform: "uppercase" }}>
               {getGreeting()}
             </ThemedText>
-            <ThemedText type="h1" style={styles.appTitle}>
+            <ThemedText type="h1" style={[styles.appTitle, { fontSize: 24 }]}>
               FastTrack
             </ThemedText>
           </View>
@@ -269,7 +380,7 @@ export default function HomeScreen() {
           style={styles.scrollView}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingBottom: tabBarHeight + 120 },
+            { paddingBottom: tabBarHeight + 10 },
           ]}
           showsVerticalScrollIndicator={false}
         >
@@ -278,9 +389,9 @@ export default function HomeScreen() {
             <Animated.View style={[styles.timerWrapper, pulseStyle]}>
               <ProgressRing
                 progress={progress}
-                size={280}
-                strokeWidth={18}
-                targetHours={activeFast?.targetDuration || 16}
+                size={300}
+                strokeWidth={20}
+                targetHours={displayDuration}
                 elapsedHours={elapsedHours}
                 showMilestones={!!activeFast}
                 onMilestonePress={(milestone: Milestone) => {
@@ -301,33 +412,33 @@ export default function HomeScreen() {
                 <View style={styles.timerContent}>
                   {activeFast ? (
                     <>
-                      <View style={[styles.planBadge, { backgroundColor: colors.primary + "20" }]}>
-                        <ThemedText type="caption" style={{ color: colors.primary, fontWeight: "700" }}>
-                          {activeFast.planName}
+                      <View style={[styles.planBadge, { backgroundColor: isOvertime ? colors.success + "20" : colors.primary + "20" }]}>
+                        <ThemedText type="caption" style={{ color: isOvertime ? colors.success : colors.primary, fontWeight: "700" }}>
+                          {isOvertime ? `Overtime: Aiming for ${displayDuration}h` : activeFast.planName}
                         </ThemedText>
                       </View>
                       <View style={styles.timerDisplay}>
                         <ThemedText style={[styles.timerText, { color: theme.text }]}>
                           {time.hours}:{time.minutes}
                         </ThemedText>
-                        <ThemedText style={[styles.timerSeconds, { color: colors.primary }]}>
+                        <ThemedText style={[styles.timerSeconds, { color: isOvertime ? colors.success : colors.primary }]}>
                           :{time.seconds}
                         </ThemedText>
                       </View>
                       <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                        {remaining > 0 ? formatRemainingTime(remaining) : "Goal reached!"}
+                        {isOvertime ? "Next milestone in " + formatRemainingTime(remaining) : formatRemainingTime(remaining) + " remaining"}
                       </ThemedText>
                     </>
                   ) : (
                     <View style={styles.emptyStateContent}>
                       <View style={[styles.emptyIcon, { backgroundColor: colors.primary + "15" }]}>
-                        <Feather name="clock" size={40} color={colors.primary} />
+                        <Feather name="clock" size={48} color={colors.primary} />
                       </View>
-                      <ThemedText type="h4" style={{ color: theme.text, marginTop: Spacing.md }}>
+                      <ThemedText type="h2" style={{ color: theme.text }}>
                         Ready to fast?
                       </ThemedText>
-                      <ThemedText type="small" style={{ color: theme.textSecondary, textAlign: "center" }}>
-                        Tap below to begin
+                      <ThemedText type="bodyMedium" style={{ color: theme.textSecondary, textAlign: "center" }}>
+                        Tap the + button to begin your journey
                       </ThemedText>
                     </View>
                   )}
@@ -336,136 +447,150 @@ export default function HomeScreen() {
             </Animated.View>
           </View>
 
-          {activeFast ? (
-            <>
-              <Pressable
-                onPress={() => navigation.navigate("FastingStages", { hoursElapsed: elapsedHours })}
-                style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
-              >
-                <FastingStageIndicator hoursElapsed={elapsedHours} />
-              </Pressable>
+          {
+            activeFast ? (
+              <>
+                <Pressable
+                  onPress={handleEndFast}
+                  style={({ pressed }) => [
+                    styles.endButton,
+                    {
+                      backgroundColor: colors.destructive + "12",
+                      borderColor: colors.destructive + "25",
+                      opacity: pressed ? 0.9 : 1,
+                    },
+                  ]}
+                >
+                  <Feather name="stop-circle" size={22} color={colors.destructive} />
+                  <ThemedText type="h4" style={{ color: colors.destructive }}>
+                    End Fast
+                  </ThemedText>
+                </Pressable>
 
-              <GlassCard accentColor={colors.primary}>
-                <View style={styles.infoHeader}>
-                  <ThemedText type="h4">Fast Details</ThemedText>
-                  <View style={[styles.progressBadge, { backgroundColor: colors.success + "20" }]}>
-                    <ThemedText type="caption" style={{ color: colors.success, fontWeight: "700" }}>
-                      {Math.round(progress * 100)}%
-                    </ThemedText>
+                <Pressable
+                  onPress={() => navigation.navigate("FastingStages", { hoursElapsed: elapsedHours })}
+                  style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, marginTop: Spacing.sm }]}
+                >
+                  <MetabolicStages elapsedHours={elapsedHours} />
+                </Pressable>
+
+                <GlassCard accentColor={colors.primary}>
+                  <View style={styles.infoHeader}>
+                    <ThemedText type="h4">Fast Details</ThemedText>
+                    <View style={[styles.progressBadge, { backgroundColor: colors.success + "20" }]}>
+                      <ThemedText type="caption" style={{ color: colors.success, fontWeight: "700" }}>
+                        {Math.round(progress * 100)}%
+                      </ThemedText>
+                    </View>
                   </View>
+                  <View style={[styles.infoDivider, { backgroundColor: theme.cardBorder }]} />
+                  <View style={styles.infoRow}>
+                    <View style={styles.infoItem}>
+                      <View style={[styles.infoIconBg, { backgroundColor: colors.success + "15" }]}>
+                        <Feather name="play" size={20} color={colors.success} />
+                      </View>
+                      <View>
+                        <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                          Started
+                        </ThemedText>
+                        <Pressable onPress={() => setDatePickerVisible(true)}>
+                          <View>
+                            <ThemedText type="h4" style={{ textDecorationLine: "underline" }}>
+                              {new Date(activeFast.startTime).toLocaleTimeString("en-US", {
+                                hour: "numeric",
+                                minute: "2-digit",
+                                hour12: true,
+                              })}
+                            </ThemedText>
+                            <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                              {new Date(activeFast.startTime).toLocaleDateString("en-US", {
+                                weekday: "short",
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </ThemedText>
+                          </View>
+                        </Pressable>
+                      </View>
+                    </View>
+                    <View style={styles.infoItem}>
+                      <View style={[styles.infoIconBg, { backgroundColor: colors.primary + "15" }]}>
+                        <Feather name="flag" size={20} color={colors.primary} />
+                      </View>
+                      <View>
+                        <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                          Goal
+                        </ThemedText>
+                        <ThemedText type="h4">
+                          {formatTargetTime(activeFast.startTime, activeFast.targetDuration)}
+                        </ThemedText>
+                      </View>
+                    </View>
+                  </View>
+                </GlassCard>
+
+                <MotivationCard progress={progress} isOvertime={isOvertime} />
+
+              </>
+            ) : (
+              <>
+                <RecommendationCard fasts={fasts} currentStreak={stats.currentStreak} />
+
+                <View style={styles.statsGrid}>
+                  <StatCard
+                    icon="zap"
+                    iconColor={colors.primary}
+                    value={`${stats.currentStreak}`}
+                    label="Day Streak"
+                    colors={colors}
+                  />
+                  <StatCard
+                    icon="award"
+                    iconColor={colors.secondary}
+                    value={`${stats.longestStreak}`}
+                    label="Best Streak"
+                    colors={colors}
+                  />
                 </View>
-                <View style={[styles.infoDivider, { backgroundColor: theme.cardBorder }]} />
-                <View style={styles.infoRow}>
-                  <View style={styles.infoItem}>
-                    <View style={[styles.infoIconBg, { backgroundColor: colors.success + "15" }]}>
-                      <Feather name="play" size={16} color={colors.success} />
-                    </View>
-                    <View>
-                      <ThemedText type="caption" style={{ color: theme.textSecondary }}>
-                        Started
-                      </ThemedText>
-                      <ThemedText type="bodyMedium">
-                        {new Date(activeFast.startTime).toLocaleTimeString("en-US", {
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })}
-                      </ThemedText>
-                    </View>
-                  </View>
-                  <View style={styles.infoItem}>
-                    <View style={[styles.infoIconBg, { backgroundColor: colors.primary + "15" }]}>
-                      <Feather name="flag" size={16} color={colors.primary} />
-                    </View>
-                    <View>
-                      <ThemedText type="caption" style={{ color: theme.textSecondary }}>
-                        Goal
-                      </ThemedText>
-                      <ThemedText type="bodyMedium">
-                        {formatTargetTime(activeFast.startTime, activeFast.targetDuration)}
-                      </ThemedText>
-                    </View>
-                  </View>
+
+                <View style={styles.statsGrid}>
+                  <StatCard
+                    icon="check-circle"
+                    iconColor={colors.success}
+                    value={`${stats.totalFasts}`}
+                    label="Fasts Done"
+                    colors={colors}
+                  />
+                  <StatCard
+                    icon="clock"
+                    iconColor="#F59E0B"
+                    value={formatHours(stats.totalHours)}
+                    label="Total Hours"
+                    colors={colors}
+                  />
                 </View>
-              </GlassCard>
 
-              <Pressable
-                onPress={handleEndFast}
-                style={({ pressed }) => [
-                  styles.endButton,
-                  {
-                    backgroundColor: colors.destructive + "18",
-                    borderColor: colors.destructive + "30",
-                    opacity: pressed ? 0.9 : 1,
-                  },
-                ]}
-              >
-                <Feather name="x-circle" size={20} color={colors.destructive} />
-                <ThemedText type="bodyMedium" style={{ color: colors.destructive }}>
-                  End Fast
-                </ThemedText>
-              </Pressable>
-            </>
-          ) : (
-            <>
-              <View style={styles.statsGrid}>
-                <StatCard
-                  icon="zap"
-                  iconColor={colors.primary}
-                  value={`${stats.currentStreak}`}
-                  label="Day Streak"
-                  colors={colors}
-                />
-                <StatCard
-                  icon="award"
-                  iconColor={colors.secondary}
-                  value={`${stats.longestStreak}`}
-                  label="Best Streak"
-                  colors={colors}
-                />
-              </View>
-
-              <View style={styles.statsGrid}>
-                <StatCard
-                  icon="check-circle"
-                  iconColor={colors.success}
-                  value={`${stats.totalFasts}`}
-                  label="Fasts Done"
-                  colors={colors}
-                />
-                <StatCard
-                  icon="clock"
-                  iconColor="#F59E0B"
-                  value={formatHours(stats.totalHours)}
-                  label="Total Hours"
-                  colors={colors}
-                />
-              </View>
-
-              <GlassCard accentColor={colors.secondary}>
-                <View style={styles.tipContent}>
-                  <View style={[styles.tipIcon, { backgroundColor: colors.secondary + "15" }]}>
-                    <Feather name="info" size={20} color={colors.secondary} />
-                  </View>
-                  <View style={styles.tipText}>
-                    <ThemedText type="bodyMedium">Quick Tip</ThemedText>
-                    <ThemedText type="small" style={{ color: theme.textSecondary, marginTop: 2 }}>
-                      Start with a 16:8 fast to ease into intermittent fasting.
-                    </ThemedText>
-                  </View>
-                </View>
-              </GlassCard>
-            </>
-          )}
+                <DailyInsight />
+              </>
+            )}
         </ScrollView>
-      </View>
+      </View >
 
       {!activeFast ? (
         <View style={[styles.fabContainer, { bottom: tabBarHeight + Spacing["2xl"] }]}>
           <FAB onPress={handleStartFast} />
         </View>
-      ) : null}
-    </View>
+      ) : null
+      }
+      <CustomDateTimePicker
+        isVisible={isDatePickerVisible}
+        date={activeFast ? new Date(activeFast.startTime) : new Date()}
+        onConfirm={handleUpdateStartTime}
+        onCancel={() => setDatePickerVisible(false)}
+        title="Edit Start Date & Time"
+        mode="datetime"
+      />
+    </View >
   );
 }
 
@@ -499,7 +624,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: Spacing.xl,
-    gap: Spacing.lg,
+    gap: Spacing.xl,
   },
   timerSection: {
     alignItems: "center",
@@ -508,12 +633,12 @@ const styles = StyleSheet.create({
   },
   glowContainer: {
     position: "absolute",
-    width: 280,
-    height: 280,
-    borderRadius: 140,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
     top: "50%",
     left: "50%",
-    transform: [{ translateX: -140 }, { translateY: -140 }],
+    transform: [{ translateX: -150 }, { translateY: -150 }],
   },
   timerWrapper: {
     alignItems: "center",
@@ -533,6 +658,7 @@ const styles = StyleSheet.create({
   timerDisplay: {
     flexDirection: "row",
     alignItems: "baseline",
+    marginVertical: -8,
   },
   timerText: {
     fontSize: 52,
@@ -543,15 +669,18 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "600",
     letterSpacing: -1,
+    paddingBottom: 6,
   },
   emptyStateContent: {
     alignItems: "center",
-    gap: Spacing.xs,
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+    maxWidth: 240, // Ensure text stays well within the 300px ring
   },
   emptyIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -563,18 +692,38 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statCardGlass: {
-    alignItems: "center",
+    padding: Spacing.lg,
+    overflow: 'hidden',
+  },
+  statContent: {
     gap: Spacing.sm,
   },
+  statHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  statIconSmall: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statValueContainer: {
+    alignItems: 'flex-start',
+  },
   statIconBg: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: Spacing.xs,
   },
   statValue: {
     letterSpacing: -1,
+    fontSize: 28,
   },
   infoHeader: {
     flexDirection: "row",
@@ -582,13 +731,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   progressBadge: {
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.sm,
   },
   infoDivider: {
     height: 1,
-    marginVertical: Spacing.md,
+    marginVertical: Spacing.lg,
   },
   infoRow: {
     flexDirection: "row",
@@ -600,9 +749,9 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   infoIconBg: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -610,10 +759,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: Spacing.lg,
-    borderRadius: BorderRadius.xl,
-    gap: Spacing.sm,
+    paddingVertical: Spacing.xl,
+    borderRadius: BorderRadius.full,
+    gap: Spacing.md,
     borderWidth: 1,
+    marginTop: Spacing.sm,
   },
   tipContent: {
     flexDirection: "row",
@@ -621,9 +771,9 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   tipIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
   },

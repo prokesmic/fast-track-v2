@@ -16,6 +16,8 @@ export interface UserProfile {
   avatarId: number;
   weightUnit: "lbs" | "kg";
   notificationsEnabled: boolean;
+  unlockedBadges: string[];
+  customAvatarUri?: string;
 }
 
 export interface WeightEntry {
@@ -40,13 +42,18 @@ const KEYS = {
 export async function getFasts(): Promise<Fast[]> {
   try {
     const data = await AsyncStorage.getItem(KEYS.FASTS);
-    return data ? JSON.parse(data) : [];
-  } catch {
+    console.log("[STORAGE] getFasts raw data length:", data?.length);
+    const parsed = data ? JSON.parse(data) : [];
+    console.log("[STORAGE] getFasts parsed count:", parsed.length);
+    return parsed;
+  } catch (e) {
+    console.error("[STORAGE] getFasts Error:", e);
     return [];
   }
 }
 
 export async function saveFast(fast: Fast): Promise<void> {
+  console.log("[STORAGE] saveFast called with:", fast);
   const fasts = await getFasts();
   const existingIndex = fasts.findIndex((f) => f.id === fast.id);
   if (existingIndex >= 0) {
@@ -54,14 +61,38 @@ export async function saveFast(fast: Fast): Promise<void> {
   } else {
     fasts.unshift(fast);
   }
-  await AsyncStorage.setItem(KEYS.FASTS, JSON.stringify(fasts));
+  const stringified = JSON.stringify(fasts);
+  console.log("[STORAGE] Saving fasts array, length:", fasts.length);
+  await AsyncStorage.setItem(KEYS.FASTS, stringified);
 }
+
 
 export async function deleteFast(id: string): Promise<void> {
   const fasts = await getFasts();
   const filtered = fasts.filter((f) => f.id !== id);
   await AsyncStorage.setItem(KEYS.FASTS, JSON.stringify(filtered));
 }
+
+export async function updateFastInStorage(id: string, updates: Partial<Fast>): Promise<Fast | null> {
+  const fasts = await getFasts();
+  const index = fasts.findIndex((f) => f.id === id);
+
+  if (index !== -1) {
+    const updatedFast = { ...fasts[index], ...updates };
+    fasts[index] = updatedFast;
+    await AsyncStorage.setItem(KEYS.FASTS, JSON.stringify(fasts));
+
+    // Also update active active fast if it's the one being modified
+    const active = await getActiveFast();
+    if (active && active.id === id) {
+      await setActiveFast({ ...active, ...updates });
+    }
+
+    return updatedFast;
+  }
+  return null;
+}
+
 
 export async function getActiveFast(): Promise<Fast | null> {
   try {
@@ -86,17 +117,19 @@ export async function getProfile(): Promise<UserProfile> {
     return data
       ? JSON.parse(data)
       : {
-          displayName: "",
-          avatarId: 0,
-          weightUnit: "lbs",
-          notificationsEnabled: false,
-        };
+        displayName: "",
+        avatarId: 0,
+        weightUnit: "lbs",
+        notificationsEnabled: false,
+        unlockedBadges: [],
+      };
   } catch {
     return {
       displayName: "",
       avatarId: 0,
       weightUnit: "lbs",
       notificationsEnabled: false,
+      unlockedBadges: [],
     };
   }
 }
@@ -220,6 +253,15 @@ export function calculateTotalHours(fasts: Fast[]): number {
       const duration = ((fast.endTime || 0) - fast.startTime) / (1000 * 60 * 60);
       return total + duration;
     }, 0);
+}
+
+export async function clearAllData(): Promise<void> {
+  const keys = [KEYS.FASTS, KEYS.ACTIVE_FAST, KEYS.PROFILE, KEYS.WEIGHTS, KEYS.WATER];
+  try {
+    await AsyncStorage.multiRemove(keys);
+  } catch (e) {
+    console.error("Error clearing data:", e);
+  }
 }
 
 export function generateId(): string {

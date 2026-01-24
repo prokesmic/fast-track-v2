@@ -2,35 +2,35 @@ import { Platform } from "react-native";
 
 export const Colors = {
   light: {
-    text: "#0F172A",
-    textSecondary: "#64748B",
-    textTertiary: "#94A3B8",
+    text: "#1E293B", // Slate-800 - softer than pure black
+    textSecondary: "#64748B", // Slate-500
+    textTertiary: "#94A3B8", // Slate-400
     buttonText: "#FFFFFF",
     tabIconDefault: "#94A3B8",
-    tabIconSelected: "#14B8A6",
-    link: "#14B8A6",
-    primary: "#14B8A6",
-    primaryLight: "#5EEAD4",
-    primaryDark: "#0D9488",
-    secondary: "#8B5CF6",
+    tabIconSelected: "#0D9488", // Teal-600 - slightly darker/richer
+    link: "#0D9488",
+    primary: "#0D9488", // Teal-600 - more sophisticated than bright teal
+    primaryLight: "#2DD4BF",
+    primaryDark: "#0F766E",
+    secondary: "#7C3AED", // Violet-600
     secondaryLight: "#A78BFA",
-    accent: "#F59E0B",
-    success: "#10B981",
+    accent: "#F59E0B", // Amber-500
+    success: "#10B981", // Emerald-500
     successLight: "#34D399",
-    destructive: "#EF4444",
+    destructive: "#EF4444", // Red-500
     destructiveLight: "#F87171",
     warning: "#F59E0B",
-    backgroundRoot: "#F8FAFC",
-    backgroundDefault: "#FFFFFF",
-    backgroundSecondary: "#F1F5F9",
-    backgroundTertiary: "#E2E8F0",
-    cardBackground: "rgba(255, 255, 255, 0.9)",
-    cardBorder: "rgba(0, 0, 0, 0.06)",
-    glassBg: "rgba(255, 255, 255, 0.7)",
-    glassBlur: 20,
-    gradientStart: "#14B8A6",
-    gradientMiddle: "#8B5CF6",
-    gradientEnd: "#EC4899",
+    backgroundRoot: "#F0F2F5", // Very subtle cool gray for root
+    backgroundDefault: "#FFFFFF", // Pure white for main surfaces
+    backgroundSecondary: "#F8FAFC", // Very light slate for secondary
+    backgroundTertiary: "#E2E8F0", // Slate-200 for borders/dividers
+    cardBackground: "rgba(255, 255, 255, 0.85)", // More glass-like
+    cardBorder: "rgba(148, 163, 184, 0.1)", // Subtle border
+    glassBg: "rgba(255, 255, 255, 0.65)", // Frosted glass
+    glassBlur: 24,
+    gradientStart: "#2DD4BF", // Teal-400
+    gradientMiddle: "#A78BFA", // Violet-400
+    gradientEnd: "#F472B6", // Pink-400
   },
   dark: {
     text: "#F1F5F9",

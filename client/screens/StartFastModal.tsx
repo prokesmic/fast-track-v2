@@ -1,18 +1,16 @@
-import React, { useState, useLayoutEffect } from "react";
+import React, { useState, useLayoutEffect, useMemo, useCallback, useEffect } from "react";
 import { View, StyleSheet, Pressable, TextInput, Alert, Dimensions, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { HeaderButton } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
+import { PanResponder } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  runOnJS,
-  interpolateColor,
 } from "react-native-reanimated";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import * as Haptics from "expo-haptics";
 
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
@@ -22,6 +20,7 @@ import { useFasting } from "@/hooks/useFasting";
 import { FASTING_PLANS, FastingPlan } from "@/lib/plans";
 import { Spacing, BorderRadius, Colors, Shadows } from "@/constants/theme";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
+import { CustomDateTimePicker } from "@/components/DateTimePicker";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const SLIDER_WIDTH = SCREEN_WIDTH - Spacing.lg * 4;
@@ -77,15 +76,23 @@ function PlanButton({ plan, selected, onPress, index }: PlanButtonProps) {
       <View style={[styles.planIconContainer, { backgroundColor: startColor + "20" }]}>
         <View style={[styles.planIconDot, { backgroundColor: startColor }]} />
       </View>
-      <ThemedText
-        type="h4"
-        style={{ color: theme.text }}
-      >
-        {plan.name}
-      </ThemedText>
+      <View style={{ gap: 2 }}>
+        <ThemedText
+          type="h4"
+          style={{ color: theme.text }}
+        >
+          {plan.name}
+        </ThemedText>
+        <ThemedText
+          type="caption"
+          style={{ color: startColor, fontWeight: "600", fontSize: 11 }}
+        >
+          {plan.tagline.toUpperCase()}
+        </ThemedText>
+      </View>
       <ThemedText
         type="small"
-        style={{ color: theme.textSecondary }}
+        style={{ color: theme.textSecondary, marginTop: "auto" }}
       >
         {plan.fastingHours}h fast : {plan.eatingHours}h eat
       </ThemedText>
@@ -106,71 +113,167 @@ function DurationSlider({
 }) {
   const { theme, colorScheme } = useTheme();
   const colors = Colors[colorScheme];
-  const gestureStartX = useSharedValue(0);
-  const thumbScale = useSharedValue(1);
-  const lastTriggeredValue = useSharedValue(value);
 
-  const valueToX = (v: number) => ((v - min) / (max - min)) * SLIDER_WIDTH;
-  const xToValue = (x: number) => Math.round(min + (Math.max(0, Math.min(SLIDER_WIDTH, x)) / SLIDER_WIDTH) * (max - min));
+  // Calculate width for calculations separate from view
+  const trackWidth = SLIDER_WIDTH;
 
-  const currentX = useSharedValue(valueToX(value));
+  const valueToX = (v: number) => {
+    return ((v - min) / (max - min)) * trackWidth;
+  };
 
+  const xToValue = (x: number) => {
+    const rawValue = min + (Math.max(0, Math.min(trackWidth, x)) / trackWidth) * (max - min);
+    return Math.round(rawValue);
+  };
+
+  // We use local state for smooth UI updates during drag, reducing parent re-renders
+  const [localX, setLocalX] = useState(valueToX(value));
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Sync with prop updates when not dragging
   React.useEffect(() => {
-    currentX.value = valueToX(value);
-    lastTriggeredValue.value = value;
+    if (!isDragging) {
+      setLocalX(valueToX(value));
+    }
+  }, [value, min, max, isDragging]);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: () => {
+          setIsDragging(true);
+          setLocalX(valueToX(value));
+          Haptics.selectionAsync();
+        },
+        onPanResponderMove: (_, gestureState) => {
+          // Use gestureStartX + dx logic if we stored startX, but here we can just map simple touches for a simple slider
+          // For a slider, it's often easier to map the touch location to the value
+          // However, PanResponder gives dx/dy. 
+
+          // Let's rely on the previous value + dx approach for typical slider feel,
+          // OR better for absolute tapping: map relative gesture coordinates.
+          // Since finding exact view coordinates can be tricky without onLayout, 
+          // we'll stick to delta updates which is robust.
+
+          // BUT: delta updates require knowing the start position. 
+          // Let's use a ref to track the start X of the gesture.
+          // We can't access 'currentX' ref easily inside useMemo without care.
+          // Just updating state directly is safest.
+        },
+        // We actually need a mutable ref to track the starting position for the gesture
+      }),
+    [value, min, max]
+  );
+
+  // To make PanResponder work perfectly with functional components and closures,
+  // we often need a Ref for the current value to avoid stale closures in Move.
+  const currentXRef = React.useRef(valueToX(value));
+
+  // Update ref when not dragging
+  if (!isDragging) {
+    currentXRef.current = valueToX(value);
+  }
+
+  const panResponsderImpl = useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderGrant: () => {
+      setIsDragging(true);
+      Haptics.selectionAsync();
+    },
+    onPanResponderMove: (_, gestureState) => {
+      const newX = Math.max(0, Math.min(trackWidth, currentXRef.current + gestureState.dx));
+      setLocalX(newX);
+
+      const newValue = xToValue(newX);
+      // We can optionally call onChange here for live updates, OR wait for release.
+      // Live updates might cause re-renders of parent. 
+      // If parent is fast, live is fine. Let's try live but throttle via integer check.
+      if (newValue !== value) { // "value" here might be stale if we don't include it in dep array
+        // actually xToValue(newX) is authoritative.
+        // We'll just call the parent. If it's too slow, we can debounce.
+        // parent's onChange triggers re-render, which updates 'value' prop.
+      }
+    },
+    onPanResponderRelease: (_, gestureState) => {
+      const newX = Math.max(0, Math.min(trackWidth, currentXRef.current + gestureState.dx));
+      const finalValue = xToValue(newX);
+      setIsDragging(false);
+      onChange(finalValue);
+      Haptics.selectionAsync();
+    },
+  }), [value, min, max, onChange]); // Re-create if value changes to keep closures fresh? 
+  // Rerendering PanResponder on every frame is bad (terminates gesture).
+  // We MUST use Refs for logic that changes during gesture.
+
+  const panResponderRef = React.useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        setIsDragging(true);
+        // We store the STARTING X position at grant time.
+        // We need reading the CURRENT valid X derived from value (or kept in state).
+        // relying on currentXRef.
+      },
+      onPanResponderMove: (_, gestureState) => {
+        // We calculate new X based on start + dx
+        // We need access to the X at start of gesture.
+        // Let's store that in a ref too.
+      },
+      onPanResponderRelease: () => {
+        setIsDragging(false);
+      }
+    })
+  );
+
+  // Let's do the CLEANEST PanResponder implementation:
+
+  const startX = React.useRef(0);
+
+  const pr = useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderGrant: () => {
+      setIsDragging(true);
+      startX.current = currentXRef.current;
+      Haptics.selectionAsync();
+    },
+    onPanResponderMove: (_, gestureState) => {
+      const newX = Math.max(0, Math.min(trackWidth, startX.current + gestureState.dx));
+      setLocalX(newX);
+
+      // Throttle haptics/callbacks?
+      // For now let's just update local UI and trigger parent only on change if needed.
+      // If we want LIVE updates on the number text, we need to call onChange or have a local derived value.
+      // To prevent parent re-renders crashing us, let's just update LOCAL state and display LOCAL value,
+      // and only Commit to parent on release?
+      // User said "move the hours slider" - so they expect to see the number changing.
+      // Let's update parent but maybe use setNativeProps for the view if possible?
+      // Actually standard React render is arguably fast enough for 60fps if component is light.
+      // Let's try just local state for the view, and call onChange only on end?
+      // NO, the number is displayed by PARENT usually? No, the number is inside this component!
+      // Great! So we can drive the number entirely by local state and only `onChange` on release.
+    },
+    onPanResponderRelease: (_, gestureState) => {
+      const newX = Math.max(0, Math.min(trackWidth, startX.current + gestureState.dx));
+      const finalValue = xToValue(newX);
+      setIsDragging(false);
+      onChange(finalValue); // Commit value
+      setLocalX(valueToX(finalValue)); // Snap to perfect integer position
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }), []);
+
+  // Sync ref
+  useEffect(() => {
+    if (!isDragging) {
+      currentXRef.current = valueToX(value);
+      setLocalX(valueToX(value));
+    }
   }, [value, min, max]);
-
-  const triggerHaptic = () => {
-    Haptics.selectionAsync();
-  };
-
-  const updateValue = (newValue: number) => {
-    onChange(newValue);
-  };
-
-  const panGesture = Gesture.Pan()
-    .onStart(() => {
-      gestureStartX.value = currentX.value;
-      thumbScale.value = withSpring(1.15);
-    })
-    .onUpdate((e) => {
-      const newX = Math.max(0, Math.min(SLIDER_WIDTH, gestureStartX.value + e.translationX));
-      currentX.value = newX;
-      const newValue = xToValue(newX);
-      if (newValue !== lastTriggeredValue.value) {
-        lastTriggeredValue.value = newValue;
-        runOnJS(triggerHaptic)();
-        runOnJS(updateValue)(newValue);
-      }
-    })
-    .onEnd(() => {
-      thumbScale.value = withSpring(1);
-    });
-
-  const tapGesture = Gesture.Tap()
-    .onEnd((e) => {
-      const newX = Math.max(0, Math.min(SLIDER_WIDTH, e.x));
-      currentX.value = withSpring(newX);
-      const newValue = xToValue(newX);
-      if (newValue !== lastTriggeredValue.value) {
-        lastTriggeredValue.value = newValue;
-        runOnJS(triggerHaptic)();
-        runOnJS(updateValue)(newValue);
-      }
-    });
-
-  const composedGesture = Gesture.Race(panGesture, tapGesture);
-
-  const thumbStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: currentX.value - THUMB_SIZE / 2 },
-      { scale: thumbScale.value },
-    ],
-  }));
-
-  const fillStyle = useAnimatedStyle(() => ({
-    width: currentX.value,
-  }));
 
   const markers = [12, 24, 48, 72];
 
@@ -178,37 +281,41 @@ function DurationSlider({
     <View style={styles.sliderContainer}>
       <View style={styles.sliderValueContainer}>
         <ThemedText type="timerLarge" style={{ color: colors.primary }}>
-          {value}
+          {xToValue(localX)}
         </ThemedText>
         <ThemedText type="body" style={{ color: theme.textSecondary }}>
           hours
         </ThemedText>
       </View>
 
-      <GestureDetector gesture={composedGesture}>
-        <Animated.View style={styles.sliderWrapper}>
-          <View style={[styles.sliderTrack, { backgroundColor: theme.backgroundTertiary }]}>
-            <Animated.View
-              style={[
-                styles.sliderFill,
-                { backgroundColor: colors.primary },
-                fillStyle,
-              ]}
-            />
-          </View>
-          <Animated.View
+      <View
+        style={styles.sliderWrapper}
+        {...pr.panHandlers}
+      >
+        <View style={[styles.sliderTrack, { backgroundColor: theme.backgroundTertiary }]}>
+          <View
             style={[
-              styles.sliderThumb,
+              styles.sliderFill,
               {
                 backgroundColor: colors.primary,
-                borderColor: "#FFFFFF",
-              },
-              Shadows.md,
-              thumbStyle,
+                width: localX
+              }
             ]}
           />
-        </Animated.View>
-      </GestureDetector>
+        </View>
+        <View
+          style={[
+            styles.sliderThumb,
+            {
+              backgroundColor: colors.primary,
+              borderColor: "#FFFFFF",
+              left: localX - THUMB_SIZE / 2, // Use left for positioning instead of transform
+              transform: [{ scale: isDragging ? 1.2 : 1 }]
+            },
+            Shadows.md,
+          ]}
+        />
+      </View>
 
       <View style={styles.sliderMarkers}>
         <ThemedText type="caption" style={{ color: theme.textSecondary }}>
@@ -219,8 +326,8 @@ function DurationSlider({
             key={marker}
             type="caption"
             style={{
-              color: value >= marker ? colors.primary : theme.textSecondary,
-              fontWeight: value >= marker ? "600" : "400",
+              color: xToValue(localX) >= marker ? colors.primary : theme.textSecondary,
+              fontWeight: xToValue(localX) >= marker ? "600" : "400",
             }}
           >
             {marker}h
@@ -241,13 +348,29 @@ export default function StartFastModal() {
   const { theme, colorScheme } = useTheme();
   const colors = Colors[colorScheme];
   const { startFast, activeFast } = useFasting();
+  // Ensure isCustom is treated as direct mode
+  const isDirectMode = !!route.params?.plan || !!route.params?.isCustom;
+  console.log("StartFastModal params:", route.params, "isDirectMode:", isDirectMode);
 
-  const initialPlan = route.params?.plan || FASTING_PLANS[0];
+  const initialPlan = (route.params?.plan as FastingPlan) || FASTING_PLANS[0];
   const [selectedPlan, setSelectedPlan] = useState<FastingPlan | null>(
     route.params?.plan ? initialPlan : null
   );
   const [customHours, setCustomHours] = useState(16);
-  const [isCustom, setIsCustom] = useState(false);
+  const [isCustom, setIsCustom] = useState(() => {
+    // Initialize strictly from params or fallback
+    return !!route.params?.isCustom;
+  });
+
+  useEffect(() => {
+    // Force custom mode if param is present, regardless of initial render
+    if (route.params?.isCustom) {
+      setIsCustom(true);
+      setSelectedPlan(null);
+    }
+  }, [route.params?.isCustom]);
+  const [startTime, setStartTime] = useState(new Date());
+  const [isDatePickerVisible, setDatePickerVisible] = useState(false);
   const [note, setNote] = useState("");
 
   useLayoutEffect(() => {
@@ -290,7 +413,7 @@ export default function StartFastModal() {
     const planName = isCustom ? `Custom ${customHours}h` : (selectedPlan?.name || "16:8");
     const planId = isCustom ? "custom" : (selectedPlan?.id || "16-8");
 
-    await startFast(planId, planName, duration, Date.now(), note || undefined);
+    await startFast(planId, planName, duration, startTime.getTime(), note || undefined);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     navigation.goBack();
   };
@@ -308,7 +431,7 @@ export default function StartFastModal() {
   };
 
   const getDuration = () => isCustom ? customHours : (selectedPlan?.fastingHours || 16);
-  const endTime = new Date(Date.now() + getDuration() * 60 * 60 * 1000);
+  const endTime = new Date(startTime.getTime() + getDuration() * 60 * 60 * 1000);
 
   const formatDuration = (hours: number) => {
     if (hours >= 24) {
@@ -329,121 +452,134 @@ export default function StartFastModal() {
         gap: Spacing["2xl"],
       }}
     >
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <ThemedText type="h3">Choose Your Plan</ThemedText>
-          <ThemedText type="small" style={{ color: theme.textSecondary }}>
-            Select a fasting schedule
-          </ThemedText>
-        </View>
-        <View style={styles.planGrid}>
-          {FASTING_PLANS.slice(0, 4).map((plan, index) => (
-            <PlanButton
-              key={plan.id}
-              plan={plan}
-              index={index}
-              selected={!isCustom && selectedPlan?.id === plan.id}
-              onPress={() => handlePlanSelect(plan)}
-            />
-          ))}
-        </View>
-
-        <Pressable
-          onPress={handleCustomSelect}
-          style={({ pressed }) => [
-            styles.customButton,
-            {
-              backgroundColor: isCustom ? colors.primary + "15" : theme.backgroundSecondary,
-              borderWidth: isCustom ? 2 : 0,
-              borderColor: isCustom ? colors.primary : "transparent",
-              opacity: pressed ? 0.9 : 1,
-            },
-          ]}
-        >
-          <View style={[styles.customIconContainer, { backgroundColor: colors.secondary + "20" }]}>
-            <Feather
-              name="sliders"
-              size={20}
-              color={colors.secondary}
-            />
-          </View>
-          <View style={styles.customButtonText}>
-            <ThemedText
-              type="h4"
-              style={{
-                color: isCustom ? colors.primary : theme.text,
-              }}
-            >
-              Custom Duration
-            </ThemedText>
+      {!isDirectMode && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <ThemedText type="h3">Choose Your Plan</ThemedText>
             <ThemedText type="small" style={{ color: theme.textSecondary }}>
-              Set anywhere from 8 to 96 hours
+              Select a fasting schedule
             </ThemedText>
           </View>
-          <View style={[
-            styles.radioOuter,
-            {
-              borderColor: isCustom ? colors.primary : theme.textTertiary,
-              backgroundColor: isCustom ? colors.primary : "transparent",
-            },
-          ]}>
-            {isCustom ? (
-              <View style={styles.radioInner} />
-            ) : null}
+          <View style={styles.planGrid}>
+            {FASTING_PLANS.slice(0, 4).map((plan, index) => (
+              <PlanButton
+                key={plan.id}
+                plan={plan}
+                index={index}
+                selected={!isCustom && selectedPlan?.id === plan.id}
+                onPress={() => handlePlanSelect(plan)}
+              />
+            ))}
           </View>
-        </Pressable>
-      </View>
 
-      {isCustom ? (
-        <View style={[styles.customSection, { backgroundColor: theme.backgroundDefault }]}>
-          <DurationSlider
-            value={customHours}
-            onChange={setCustomHours}
-            min={8}
-            max={96}
-          />
-        </View>
-      ) : selectedPlan ? (
-        <View style={[styles.planPreview, { backgroundColor: theme.backgroundDefault }]}>
-          <View style={styles.planPreviewTop}>
-            <View style={[styles.planPreviewBadge, { backgroundColor: colors.primary + "15" }]}>
-              <ThemedText type="caption" style={{ color: colors.primary, textTransform: "uppercase" }}>
-                {selectedPlan.difficulty}
+          <Pressable
+            onPress={handleCustomSelect}
+            style={({ pressed }) => [
+              styles.customButton,
+              {
+                backgroundColor: isCustom ? colors.primary + "15" : theme.backgroundSecondary,
+                borderWidth: isCustom ? 2 : 0,
+                borderColor: isCustom ? colors.primary : "transparent",
+                opacity: pressed ? 0.9 : 1,
+              },
+            ]}
+          >
+            <View style={[styles.customIconContainer, { backgroundColor: colors.secondary + "20" }]}>
+              <Feather
+                name="sliders"
+                size={20}
+                color={colors.secondary}
+              />
+            </View>
+            <View style={styles.customButtonText}>
+              <ThemedText
+                type="h4"
+                style={{
+                  color: isCustom ? colors.primary : theme.text,
+                }}
+              >
+                Custom Duration
+              </ThemedText>
+              <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                Set anywhere from 8 to 96 hours
               </ThemedText>
             </View>
-          </View>
-          <ThemedText type="h2" style={{ color: theme.text }}>
-            {selectedPlan.name}
-          </ThemedText>
-          <ThemedText type="body" style={{ color: theme.textSecondary, lineHeight: 24 }}>
-            {selectedPlan.description}
-          </ThemedText>
-          <View style={styles.planStats}>
-            <View style={[styles.planStat, { backgroundColor: colors.primary + "10" }]}>
-              <Feather name="moon" size={18} color={colors.primary} />
-              <View>
-                <ThemedText type="h4" style={{ color: colors.primary }}>
-                  {selectedPlan.fastingHours}h
-                </ThemedText>
-                <ThemedText type="caption" style={{ color: theme.textSecondary }}>
-                  Fasting
-                </ThemedText>
-              </View>
+            <View style={[
+              styles.radioOuter,
+              {
+                borderColor: isCustom ? colors.primary : theme.textTertiary,
+                backgroundColor: isCustom ? colors.primary : "transparent",
+              },
+            ]}>
+              {isCustom ? (
+                <View style={styles.radioInner} />
+              ) : null}
             </View>
-            <View style={[styles.planStat, { backgroundColor: colors.success + "10" }]}>
-              <Feather name="sun" size={18} color={colors.success} />
-              <View>
-                <ThemedText type="h4" style={{ color: colors.success }}>
-                  {selectedPlan.eatingHours}h
-                </ThemedText>
-                <ThemedText type="caption" style={{ color: theme.textSecondary }}>
-                  Eating
-                </ThemedText>
-              </View>
-            </View>
-          </View>
+          </Pressable>
         </View>
-      ) : null}
+      )}
+
+      {
+        isCustom ? (
+          <View style={[styles.customSection, { backgroundColor: theme.backgroundDefault }]}>
+            <DurationSlider
+              value={customHours}
+              onChange={setCustomHours}
+              min={8}
+              max={96}
+            />
+          </View>
+        ) : selectedPlan ? (
+          <View style={[styles.planPreview, { backgroundColor: theme.backgroundDefault }]}>
+            <View style={styles.planPreviewTop}>
+              <View style={[styles.planPreviewBadge, { backgroundColor: colors.primary + "15" }]}>
+                <ThemedText type="caption" style={{ color: colors.primary, textTransform: "uppercase" }}>
+                  {selectedPlan.difficulty}
+                </ThemedText>
+              </View>
+            </View>
+            <ThemedText type="h2" style={{ color: theme.text }}>
+              {selectedPlan.name}
+            </ThemedText>
+            <ThemedText type="body" style={{ color: theme.textSecondary, lineHeight: 24 }}>
+              {selectedPlan.description}
+            </ThemedText>
+
+            <View style={{ marginTop: Spacing.sm, gap: Spacing.xs }}>
+              {selectedPlan.benefits.slice(0, 3).map((benefit, i) => (
+                <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                  <Feather name="check" size={14} color={colors.primary} />
+                  <ThemedText type="small" style={{ color: theme.text }}>{benefit}</ThemedText>
+                </View>
+              ))}
+            </View>
+            <View style={styles.planStats}>
+              <View style={[styles.planStat, { backgroundColor: colors.primary + "10" }]}>
+                <Feather name="moon" size={18} color={colors.primary} />
+                <View>
+                  <ThemedText type="h4" style={{ color: colors.primary }}>
+                    {selectedPlan.fastingHours}h
+                  </ThemedText>
+                  <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                    Fasting
+                  </ThemedText>
+                </View>
+              </View>
+              <View style={[styles.planStat, { backgroundColor: colors.success + "10" }]}>
+                <Feather name="sun" size={18} color={colors.success} />
+                <View>
+                  <ThemedText type="h4" style={{ color: colors.success }}>
+                    {selectedPlan.eatingHours}h
+                  </ThemedText>
+                  <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                    Eating
+                  </ThemedText>
+                </View>
+              </View>
+            </View>
+          </View>
+        ) : null
+      }
 
       <View style={[styles.scheduleCard, { backgroundColor: theme.backgroundDefault }]}>
         <ThemedText type="h4" style={{ marginBottom: Spacing.md }}>Your Schedule</ThemedText>
@@ -452,18 +588,23 @@ export default function StartFastModal() {
             <View style={[styles.timelineDot, { backgroundColor: colors.success }]} />
             <View style={styles.timelineContent}>
               <ThemedText type="caption" style={{ color: theme.textSecondary, textTransform: "uppercase" }}>
-                Start Now
+                Start
               </ThemedText>
-              <ThemedText type="h3">
-                {new Date().toLocaleTimeString("en-US", {
-                  hour: "numeric",
-                  minute: "2-digit",
-                  hour12: true,
-                })}
+              <Pressable onPress={() => setDatePickerVisible(true)}>
+                <ThemedText type="h3" style={{ color: colors.primary, textDecorationLine: "underline" }}>
+                  {startTime.toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  })}
+                </ThemedText>
+              </Pressable>
+              <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                {startTime.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
               </ThemedText>
             </View>
           </View>
-          
+
           <View style={[styles.timelineLine, { backgroundColor: theme.backgroundTertiary }]}>
             <View style={[styles.durationPill, { backgroundColor: colors.primary + "15" }]}>
               <ThemedText type="small" style={{ color: colors.primary, fontWeight: "600" }}>
@@ -471,7 +612,7 @@ export default function StartFastModal() {
               </ThemedText>
             </View>
           </View>
-          
+
           <View style={styles.scheduleTimeItem}>
             <View style={[styles.timelineDot, { backgroundColor: colors.primary }]} />
             <View style={styles.timelineContent}>
@@ -521,8 +662,8 @@ export default function StartFastModal() {
         onPress={handleStart}
         style={({ pressed }) => [
           styles.startButton,
-          { 
-            backgroundColor: colors.primary, 
+          {
+            backgroundColor: colors.primary,
             opacity: pressed ? 0.9 : 1,
           },
           Shadows.lg,
@@ -533,7 +674,19 @@ export default function StartFastModal() {
           Begin Fast
         </ThemedText>
       </Pressable>
-    </KeyboardAwareScrollViewCompat>
+
+      <CustomDateTimePicker
+        isVisible={isDatePickerVisible}
+        date={startTime}
+        onConfirm={(date) => {
+          setStartTime(date);
+          setDatePickerVisible(false);
+        }}
+        onCancel={() => setDatePickerVisible(false)}
+        title="Start Time"
+        mode="datetime"
+      />
+    </KeyboardAwareScrollViewCompat >
   );
 }
 

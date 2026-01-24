@@ -53,6 +53,7 @@ export function InsightCard({ title, description, icon, color, onPress }: Insigh
         { backgroundColor: theme.backgroundDefault },
         animatedStyle,
       ]}
+      pointerEvents="auto"
     >
       <View style={[styles.iconContainer, { backgroundColor: color + "15" }]}>
         <Feather name={icon} size={20} color={color} />

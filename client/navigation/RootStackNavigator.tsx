@@ -5,6 +5,7 @@ import StartFastModal from "@/screens/StartFastModal";
 import PlanDetailModal from "@/screens/PlanDetailModal";
 import FastingStagesScreen from "@/screens/FastingStagesScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
+import BadgesScreen from "@/screens/BadgesScreen";
 
 export type FastingPlan = {
   id: string;
@@ -18,9 +19,10 @@ export type FastingPlan = {
 
 export type RootStackParamList = {
   Main: undefined;
-  StartFast: { plan?: FastingPlan };
+  StartFast: { plan?: FastingPlan; isCustom?: boolean };
   PlanDetail: { plan: FastingPlan };
   FastingStages: { hoursElapsed?: number };
+  Badges: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -56,6 +58,15 @@ export default function RootStackNavigator() {
         component={FastingStagesScreen}
         options={{
           headerTitle: "Fasting Stages",
+        }}
+      />
+      <Stack.Screen
+        name="Badges"
+        component={BadgesScreen}
+        options={{
+          headerTitle: "All Badges",
+          headerTransparent: true,
+          headerBlurEffect: "regular",
         }}
       />
     </Stack.Navigator>

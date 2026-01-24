@@ -6,6 +6,7 @@ export interface FastingPlan {
   description: string;
   difficulty: "Easy" | "Medium" | "Hard" | "Expert";
   benefits: string[];
+  tagline: string;
 }
 
 export const FASTING_PLANS: FastingPlan[] = [
@@ -23,6 +24,7 @@ export const FASTING_PLANS: FastingPlan[] = [
       "Easy to maintain long-term",
       "Flexible eating window",
     ],
+    tagline: "Most Popular",
   },
   {
     id: "18-6",
@@ -38,6 +40,7 @@ export const FASTING_PLANS: FastingPlan[] = [
       "Enhanced mental clarity",
       "Reduced inflammation",
     ],
+    tagline: "Fat Burning",
   },
   {
     id: "20-4",
@@ -53,6 +56,7 @@ export const FASTING_PLANS: FastingPlan[] = [
       "Improved growth hormone",
       "Simplified meal planning",
     ],
+    tagline: "Warrior Mode",
   },
   {
     id: "omad",
@@ -68,6 +72,7 @@ export const FASTING_PLANS: FastingPlan[] = [
       "Ultimate simplicity",
       "Deep cellular repair",
     ],
+    tagline: "Max Autophagy",
   },
   {
     id: "14-10",
@@ -83,6 +88,7 @@ export const FASTING_PLANS: FastingPlan[] = [
       "Improved digestion",
       "Better sleep quality",
     ],
+    tagline: "Gentle Start",
   },
   {
     id: "12-12",
@@ -98,6 +104,7 @@ export const FASTING_PLANS: FastingPlan[] = [
       "Digestive rest",
       "Sustainable habit building",
     ],
+    tagline: "Circadian Reset",
   },
 ];
 

@@ -1,8 +1,8 @@
-import React from "react";
-import { ScrollView, StyleSheet, View, Pressable } from "react-native";
+import React, { useState, useCallback } from "react";
+import { ScrollView, StyleSheet, View, Pressable, Alert, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 import Animated, {
@@ -18,6 +18,7 @@ import { GradientBackground } from "@/components/GradientBackground";
 import { useTheme } from "@/hooks/useTheme";
 import { Spacing, BorderRadius, Colors, Shadows } from "@/constants/theme";
 import { FASTING_PLANS } from "@/lib/plans";
+import { useFasting } from "@/hooks/useFasting";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -36,9 +37,10 @@ interface PlanCardProps {
   onPress: () => void;
   onStartPress: () => void;
   accentColor: string;
+  hasActiveFast: boolean;
 }
 
-function PlanCard({ plan, onPress, onStartPress, accentColor }: PlanCardProps) {
+function PlanCard({ plan, onPress, onStartPress, accentColor, hasActiveFast }: PlanCardProps) {
   const { theme, colorScheme } = useTheme();
   const colors = Colors[colorScheme];
   const scale = useSharedValue(1);
@@ -104,16 +106,16 @@ function PlanCard({ plan, onPress, onStartPress, accentColor }: PlanCardProps) {
           }}
           style={({ pressed }) => [
             styles.startButton,
-            { 
+            {
               backgroundColor: accentColor,
               opacity: pressed ? 0.9 : 1,
             },
             Shadows.coloredLg(accentColor),
           ]}
         >
-          <Feather name="play" size={18} color="#FFFFFF" />
+          <Feather name={hasActiveFast ? "refresh-cw" : "play"} size={18} color="#FFFFFF" />
           <ThemedText type="bodyMedium" style={{ color: "#FFFFFF" }}>
-            Start Plan
+            {hasActiveFast ? "Switch Plan" : "Start Fast"}
           </ThemedText>
         </Pressable>
       </GlassCard>
@@ -127,6 +129,13 @@ export default function PlansScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { theme, colorScheme } = useTheme();
   const colors = Colors[colorScheme];
+  const { activeFast, refresh } = useFasting();
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
 
   const handlePlanPress = (plan: (typeof FASTING_PLANS)[0]) => {
     Haptics.selectionAsync();
@@ -134,13 +143,43 @@ export default function PlansScreen() {
   };
 
   const handleStartPress = (plan: (typeof FASTING_PLANS)[0]) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    navigation.navigate("StartFast", { plan });
+    const proceed = () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      navigation.navigate("StartFast", { plan });
+    };
+
+    if (activeFast) {
+      Alert.alert(
+        "Switch Plan?",
+        "You currently have an active fast. Starting a new plan will end your current session. Do you want to continue?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Switch & Restart", style: "destructive", onPress: proceed }
+        ]
+      );
+    } else {
+      proceed();
+    }
   };
 
   const handleCustomPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    navigation.navigate("StartFast", {});
+    const proceed = () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      navigation.navigate("StartFast", { isCustom: true });
+    };
+
+    if (activeFast) {
+      Alert.alert(
+        "Switch Plan?",
+        "You currently have an active fast. Starting a new plan will end your current session. Do you want to continue?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Switch & Restart", style: "destructive", onPress: proceed }
+        ]
+      );
+    } else {
+      proceed();
+    }
   };
 
   const popularPlans = FASTING_PLANS.filter((p) =>
@@ -156,7 +195,7 @@ export default function PlansScreen() {
   return (
     <View style={styles.container}>
       <GradientBackground variant="plans" />
-      
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
@@ -179,7 +218,7 @@ export default function PlansScreen() {
           onPress={handleCustomPress}
           style={({ pressed }) => [
             styles.customCard,
-            { 
+            {
               opacity: pressed ? 0.9 : 1,
             },
           ]}
@@ -222,6 +261,7 @@ export default function PlansScreen() {
                 accentColor={planColors[index % planColors.length]}
                 onPress={() => handlePlanPress(plan)}
                 onStartPress={() => handleStartPress(plan)}
+                hasActiveFast={!!activeFast}
               />
             ))}
           </View>
@@ -247,6 +287,7 @@ export default function PlansScreen() {
                 accentColor={colors.success}
                 onPress={() => handlePlanPress(plan)}
                 onStartPress={() => handleStartPress(plan)}
+                hasActiveFast={!!activeFast}
               />
             ))}
           </View>

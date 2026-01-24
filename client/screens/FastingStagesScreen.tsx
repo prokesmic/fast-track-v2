@@ -19,7 +19,7 @@ import * as Haptics from "expo-haptics";
 
 import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks/useTheme";
-import { FASTING_STAGES, FastingStage, getCurrentStage } from "@/lib/fastingStages";
+import { FASTING_STAGES, FastingStage, getStageForDuration } from "@/constants/fastingStages";
 import { Spacing, BorderRadius, Colors } from "@/constants/theme";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 
@@ -95,7 +95,7 @@ export default function FastingStagesScreen() {
   const route = useRoute<FastingStagesRouteProp>();
   const { theme } = useTheme();
   const hoursElapsed = route.params?.hoursElapsed || 0;
-  const currentStage = getCurrentStage(hoursElapsed);
+  const currentStage = getStageForDuration(hoursElapsed);
 
   const [selectedStage, setSelectedStage] = useState<FastingStage>(currentStage);
   const flatListRef = useRef<FlatList>(null);
@@ -119,13 +119,13 @@ export default function FastingStagesScreen() {
   };
 
   const renderStageIcon = ({ item, index }: { item: FastingStage; index: number }) => {
-    const isActive = hoursElapsed >= item.startHours;
+    const isActive = hoursElapsed >= item.startHour;
     const isCurrent = item.id === currentStage.id;
     const isSelected = item.id === selectedStage.id;
 
     return (
       <View style={styles.stageIconContainer}>
-        {index > 0 ? <StageConnector isActive={hoursElapsed >= item.startHours} /> : null}
+        {index > 0 ? <StageConnector isActive={hoursElapsed >= item.startHour} /> : null}
         <StageIcon
           stage={item}
           isActive={isActive || isSelected}
@@ -147,7 +147,7 @@ export default function FastingStagesScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.timelineContent}
-          onScrollToIndexFailed={() => {}}
+          onScrollToIndexFailed={() => { }}
         />
       </View>
 
