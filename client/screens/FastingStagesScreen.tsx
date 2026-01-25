@@ -273,13 +273,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   timelineContainer: {
-    paddingVertical: Spacing.lg,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.05)",
+    minHeight: STAGE_ICON_SIZE + 14 + Spacing.xl + Spacing.md, // icon + dot + padding
   },
   timelineContent: {
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
     alignItems: "center",
+    minHeight: STAGE_ICON_SIZE + 14, // icon + dot with margin
   },
   stageIconContainer: {
     flexDirection: "row",
