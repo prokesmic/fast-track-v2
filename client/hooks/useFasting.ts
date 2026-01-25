@@ -15,6 +15,11 @@ import {
 import { BADGES } from "@/constants/badges";
 import { getProfile, saveProfile } from "@/lib/storage";
 import { Alert } from "react-native";
+import {
+  syncFastToCloud,
+  deleteFastFromCloud,
+  isAuthenticated,
+} from "@/lib/sync";
 
 export function useFasting() {
   const [fasts, setFasts] = useState<Fast[]>([]);
@@ -83,6 +88,11 @@ export function useFasting() {
       await saveFast(endedFast);
       await setActiveFast(null);
       setActiveFastState(null);
+
+      // Sync to cloud if authenticated
+      syncFastToCloud(endedFast).catch(() => {
+        // Silently fail - will sync on next full sync
+      });
 
       const newFasts = [endedFast, ...fasts];
       setFasts(newFasts);
@@ -194,11 +204,17 @@ export function useFasting() {
         const updated = { ...activeFast, ...updates };
         await setActiveFast(updated);
         setActiveFastState(updated);
+        // Sync to cloud
+        syncFastToCloud(updated).catch(() => {});
       } else {
-        await updateFastInStorage(id, updates);
+        const updatedFast = await updateFastInStorage(id, updates);
         // Refresh list to show updates in history immediately
         const fastsData = await getFasts();
         setFasts(fastsData);
+        // Sync to cloud if we have the full fast
+        if (updatedFast) {
+          syncFastToCloud(updatedFast).catch(() => {});
+        }
       }
     } catch (error) {
       console.error("Error updating fast:", error);
@@ -214,6 +230,11 @@ export function useFasting() {
       if (activeFast && activeFast.id === id) {
         setActiveFastState(null);
       }
+
+      // Sync deletion to cloud if authenticated
+      deleteFastFromCloud(id).catch(() => {
+        // Silently fail - will sync on next full sync
+      });
     } catch (error) {
       console.error("Error deleting fast:", error);
     }

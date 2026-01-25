@@ -4,6 +4,8 @@ import MainTabNavigator from "@/navigation/MainTabNavigator";
 import StartFastModal from "@/screens/StartFastModal";
 import PlanDetailModal from "@/screens/PlanDetailModal";
 import FastingStagesScreen from "@/screens/FastingStagesScreen";
+import LoginScreen from "@/screens/LoginScreen";
+import RegisterScreen from "@/screens/RegisterScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 import BadgesScreen from "@/screens/BadgesScreen";
 
@@ -18,6 +20,8 @@ export type FastingPlan = {
 };
 
 export type RootStackParamList = {
+  Login: undefined;
+  Register: undefined;
   Main: undefined;
   StartFast: { plan?: FastingPlan; isCustom?: boolean };
   PlanDetail: { plan: FastingPlan };
@@ -31,7 +35,17 @@ export default function RootStackNavigator() {
   const screenOptions = useScreenOptions();
 
   return (
-    <Stack.Navigator screenOptions={screenOptions}>
+    <Stack.Navigator screenOptions={screenOptions} initialRouteName="Login">
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Register"
+        component={RegisterScreen}
+        options={{ headerShown: false }}
+      />
       <Stack.Screen
         name="Main"
         component={MainTabNavigator}

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, StyleSheet, Pressable, TextInput, Switch, Alert, Image, NativeModules, Platform } from "react-native";
+import { View, StyleSheet, Pressable, TextInput, Switch, Alert, Image, NativeModules, Platform, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
 import Animated, {
   useAnimatedStyle,
@@ -14,6 +15,8 @@ import * as ImagePicker from "expo-image-picker";
 import * as Updates from "expo-updates";
 
 import { safeHaptics, showAlert, showConfirm } from "@/lib/platform";
+import { useAuth } from "@/context/AuthContext";
+import { performFullSync, getLastSyncTime } from "@/lib/sync";
 
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { ThemedText } from "@/components/ThemedText";
@@ -111,13 +114,24 @@ function StatBox({ icon, value, label, color }: StatBoxProps) {
   );
 }
 
+type RootStackParamList = {
+  Login: undefined;
+  Register: undefined;
+  Main: undefined;
+};
+
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { theme, colorScheme, themeType, setThemeType } = useTheme();
   const colors = Colors[colorScheme];
   const { stats, refresh, fasts, activeFast, cancelFast, deleteFast, updateFast } = useFasting();
+  const { user, isAuthenticated, logout } = useAuth();
+
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
 
   const [profile, setProfile] = useState<UserProfile>({
     displayName: "",
@@ -139,13 +153,63 @@ export default function ProfileScreen() {
   const recentFasts = completedFasts.slice(0, 5); // Show top 5
 
   const loadData = useCallback(async () => {
-    const [profileData, weightsData] = await Promise.all([
+    const [profileData, weightsData, syncTime] = await Promise.all([
       getProfile(),
       getWeights(),
+      getLastSyncTime(),
     ]);
     setProfile(profileData);
     setWeights(weightsData);
+    setLastSyncTime(syncTime);
   }, []);
+
+  const handleSync = async () => {
+    if (!isAuthenticated) return;
+    setIsSyncing(true);
+    safeHaptics.impactAsync();
+
+    const result = await performFullSync();
+
+    setIsSyncing(false);
+    if (result.success) {
+      safeHaptics.notificationAsync();
+      await loadData();
+      refresh();
+      showAlert("Sync Complete", "Your data has been synced successfully.");
+    } else {
+      showAlert("Sync Failed", result.error || "Could not sync data. Please try again.");
+    }
+  };
+
+  const handleLogout = async () => {
+    const confirmed = await showConfirm(
+      "Sign Out",
+      "Are you sure you want to sign out? Your local data will be preserved.",
+      "Sign Out",
+      "Cancel"
+    );
+    if (confirmed) {
+      safeHaptics.notificationAsync();
+      await logout();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      });
+    }
+  };
+
+  const formatSyncTime = (timestamp: number | null): string => {
+    if (!timestamp) return "Never";
+    const now = Date.now();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -730,6 +794,87 @@ export default function ProfileScreen() {
               </>
             ) : null}
 
+          </GlassCard>
+        </View>
+
+        {/* Account Section */}
+        <View style={styles.settingsSection}>
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionIcon, { backgroundColor: colors.primary + "18" }]}>
+              <Feather name="user" size={18} color={colors.primary} />
+            </View>
+            <View>
+              <ThemedText type="h3">Account</ThemedText>
+              <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                {isAuthenticated ? user?.email : "Not signed in"}
+              </ThemedText>
+            </View>
+          </View>
+
+          <GlassCard>
+            {isAuthenticated ? (
+              <>
+                {/* Sync Button */}
+                <Pressable
+                  onPress={handleSync}
+                  disabled={isSyncing}
+                  style={styles.settingRow}
+                >
+                  <View style={styles.settingInfo}>
+                    <View style={[styles.settingIcon, { backgroundColor: colors.success + "15" }]}>
+                      {isSyncing ? (
+                        <ActivityIndicator size="small" color={colors.success} />
+                      ) : (
+                        <Feather name="refresh-cw" size={18} color={colors.success} />
+                      )}
+                    </View>
+                    <View>
+                      <ThemedText type="bodyMedium">Sync Data</ThemedText>
+                      <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                        Last synced: {formatSyncTime(lastSyncTime)}
+                      </ThemedText>
+                    </View>
+                  </View>
+                </Pressable>
+
+                <View style={[styles.settingDivider, { backgroundColor: theme.cardBorder }]} />
+
+                {/* Logout Button */}
+                <Pressable
+                  onPress={handleLogout}
+                  style={styles.settingRow}
+                >
+                  <View style={styles.settingInfo}>
+                    <View style={[styles.settingIcon, { backgroundColor: colors.destructive + "15" }]}>
+                      <Feather name="log-out" size={18} color={colors.destructive} />
+                    </View>
+                    <View>
+                      <ThemedText type="bodyMedium" style={{ color: colors.destructive }}>Sign Out</ThemedText>
+                      <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                        {user?.email}
+                      </ThemedText>
+                    </View>
+                  </View>
+                </Pressable>
+              </>
+            ) : (
+              <Pressable
+                onPress={() => navigation.navigate("Login")}
+                style={styles.settingRow}
+              >
+                <View style={styles.settingInfo}>
+                  <View style={[styles.settingIcon, { backgroundColor: colors.primary + "15" }]}>
+                    <Feather name="log-in" size={18} color={colors.primary} />
+                  </View>
+                  <View>
+                    <ThemedText type="bodyMedium">Sign In</ThemedText>
+                    <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                      Sync your data across devices
+                    </ThemedText>
+                  </View>
+                </View>
+              </Pressable>
+            )}
           </GlassCard>
         </View>
 
