@@ -149,6 +149,7 @@ export default function FastingStagesScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.timelineContent}
           onScrollToIndexFailed={() => { }}
+          style={styles.timelineFlatList}
         />
       </View>
 
@@ -273,16 +274,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   timelineContainer: {
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.md,
+    paddingTop: Spacing["2xl"],
+    paddingBottom: Spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.05)",
-    minHeight: STAGE_ICON_SIZE + 14 + Spacing.xl + Spacing.md, // icon + dot + padding
+  },
+  timelineFlatList: {
+    overflow: "visible",
   },
   timelineContent: {
     paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.sm,
     alignItems: "center",
-    minHeight: STAGE_ICON_SIZE + 14, // icon + dot with margin
   },
   stageIconContainer: {
     flexDirection: "row",
