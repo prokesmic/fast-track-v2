@@ -90,6 +90,7 @@ export function ProfileHero({ profile, totalHours, onEdit, AVATARS }: ProfileHer
                             <Image
                                 source={{ uri: profile.customAvatarUri }}
                                 style={{ width: '100%', height: '100%' }}
+                                resizeMode="cover"
                             />
                         </View>
                     ) : (

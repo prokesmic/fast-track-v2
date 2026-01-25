@@ -263,18 +263,28 @@ export default function ProfileScreen() {
               <View
                 style={[
                   styles.avatarGlow,
-                  { backgroundColor: selectedAvatar.color },
-                  Shadows.glow(selectedAvatar.color),
+                  { backgroundColor: profile.customAvatarUri ? colors.primary : selectedAvatar.color },
+                  profile.customAvatarUri ? undefined : Shadows.glow(selectedAvatar.color),
                 ]}
               />
-              <View
-                style={[
-                  styles.avatarContainer,
-                  { backgroundColor: selectedAvatar.color + "25" },
-                ]}
-              >
-                <Feather name={selectedAvatar.icon} size={56} color={selectedAvatar.color} />
-              </View>
+              {profile.customAvatarUri ? (
+                <View style={[styles.avatarContainer, { overflow: 'hidden' }]}>
+                  <Image
+                    source={{ uri: profile.customAvatarUri }}
+                    style={{ width: '100%', height: '100%' }}
+                    resizeMode="cover"
+                  />
+                </View>
+              ) : (
+                <View
+                  style={[
+                    styles.avatarContainer,
+                    { backgroundColor: selectedAvatar.color + "25" },
+                  ]}
+                >
+                  <Feather name={selectedAvatar.icon} size={56} color={selectedAvatar.color} />
+                </View>
+              )}
             </View>
 
             <GlassCard style={styles.avatarPicker}>
@@ -307,7 +317,7 @@ export default function ProfileScreen() {
                   onPress={handlePickImage}
                   style={[
                     styles.avatarOption,
-                    { backgroundColor: theme.backgroundTertiary },
+                    { backgroundColor: theme.backgroundTertiary, overflow: 'hidden' },
                     profile.customAvatarUri ? {
                       borderWidth: 2,
                       borderColor: colors.primary,
@@ -315,7 +325,11 @@ export default function ProfileScreen() {
                   ]}
                 >
                   {profile.customAvatarUri ? (
-                    <Image source={{ uri: profile.customAvatarUri }} style={{ width: "100%", height: "100%", borderRadius: 30 }} />
+                    <Image
+                      source={{ uri: profile.customAvatarUri }}
+                      style={{ width: "100%", height: "100%", borderRadius: 30 }}
+                      resizeMode="cover"
+                    />
                   ) : (
                     <Feather name="camera" size={24} color={theme.textSecondary} />
                   )}
