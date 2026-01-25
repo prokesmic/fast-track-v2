@@ -32,18 +32,26 @@ export function FastEditModal({ isVisible, fast, onClose, onSave, onDelete }: Fa
         }
     }, [fast]);
 
+    const showAlert = (title: string, message: string) => {
+        if (Platform.OS === "web") {
+            window.alert(`${title}\n\n${message}`);
+        } else {
+            Alert.alert(title, message);
+        }
+    };
+
     const handleSave = async () => {
         if (!fast) return;
 
         // Validation: End time must be after start time (if ended)
         if (fast.endTime && endTime.getTime() <= startTime.getTime()) {
-            Alert.alert("Invalid Time", "End time must be after start time");
+            showAlert("Invalid Time", "End time must be after start time");
             return;
         }
 
         // Even if ongoing (no end time), logic usually implies we are editing start time relative to now
         if (startTime.getTime() > Date.now()) {
-            Alert.alert("Invalid Time", "Start time cannot be in the future");
+            showAlert("Invalid Time", "Start time cannot be in the future");
             return;
         }
 
@@ -59,23 +67,34 @@ export function FastEditModal({ isVisible, fast, onClose, onSave, onDelete }: Fa
         onClose();
     };
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (!fast) return;
-        Alert.alert(
-            "Delete Fast",
-            "Are you sure you want to delete this fast? This action cannot be undone.",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: async () => {
-                        await onDelete(fast.id);
-                        onClose();
+
+        if (Platform.OS === "web") {
+            const confirmed = window.confirm(
+                "Delete Fast\n\nAre you sure you want to delete this fast? This action cannot be undone."
+            );
+            if (confirmed) {
+                await onDelete(fast.id);
+                onClose();
+            }
+        } else {
+            Alert.alert(
+                "Delete Fast",
+                "Are you sure you want to delete this fast? This action cannot be undone.",
+                [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                        text: "Delete",
+                        style: "destructive",
+                        onPress: async () => {
+                            await onDelete(fast.id);
+                            onClose();
+                        },
                     },
-                },
-            ]
-        );
+                ]
+            );
+        }
     };
 
     if (!fast) return null;
