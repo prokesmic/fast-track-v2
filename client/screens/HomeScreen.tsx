@@ -33,6 +33,7 @@ import { useFasting } from "@/hooks/useFasting";
 import { Spacing, Colors, BorderRadius, Shadows } from "@/constants/theme";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { CustomDateTimePicker } from "@/components/DateTimePicker";
+import { MilestoneDetailModal } from "@/components/MilestoneDetailModal";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -179,6 +180,7 @@ export default function HomeScreen() {
   const pulseAnim = useSharedValue(1);
   const glowAnim = useSharedValue(0.5);
   const [isDatePickerVisible, setDatePickerVisible] = useState(false);
+  const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
 
   const handleUpdateStartTime = useCallback(async (date: Date) => {
     setDatePickerVisible(false);
@@ -390,18 +392,7 @@ export default function HomeScreen() {
                 elapsedHours={elapsedHours}
                 showMilestones={!!activeFast}
                 onMilestonePress={(milestone: Milestone) => {
-                  if (Platform.OS === "web") {
-                    window.alert(`${milestone.name} (${milestone.hours}h)\n\n${milestone.description}`);
-                  } else {
-                    Alert.alert(
-                      `${milestone.name}`,
-                      `Reached at ${milestone.hours} hours\n\n${milestone.description}`,
-                      [
-                        { text: "Learn More", onPress: () => navigation.navigate("FastingStages", { hoursElapsed: milestone.hours }) },
-                        { text: "OK", style: "cancel" }
-                      ]
-                    );
-                  }
+                  setSelectedMilestone(milestone);
                 }}
               >
                 <View style={styles.timerContent}>
@@ -584,6 +575,18 @@ export default function HomeScreen() {
         onCancel={() => setDatePickerVisible(false)}
         title="Edit Start Date & Time"
         mode="datetime"
+      />
+      <MilestoneDetailModal
+        isVisible={!!selectedMilestone}
+        milestone={selectedMilestone}
+        isPassed={selectedMilestone ? elapsedHours >= selectedMilestone.hours : false}
+        elapsedHours={elapsedHours}
+        onClose={() => setSelectedMilestone(null)}
+        onLearnMore={() => {
+          const hours = selectedMilestone?.hours || 0;
+          setSelectedMilestone(null);
+          navigation.navigate("FastingStages", { hoursElapsed: hours });
+        }}
       />
     </View >
   );
