@@ -1,6 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { View, Platform, Modal, StyleSheet, Pressable, TextInput } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import React, { useState, useEffect, useRef } from "react";
+import {
+    View,
+    Modal,
+    StyleSheet,
+    Pressable,
+    ScrollView,
+    Dimensions,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks/useTheme";
@@ -15,34 +21,153 @@ interface DateTimePickerProps {
     mode?: "date" | "time" | "datetime";
 }
 
-function formatDateForInput(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
+const ITEM_HEIGHT = 44;
+const VISIBLE_ITEMS = 5;
+const PICKER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
+
+const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+];
+
+const shortMonths = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+];
+
+function getDaysInMonth(year: number, month: number): number {
+    return new Date(year, month + 1, 0).getDate();
 }
 
-function formatTimeForInput(date: Date): string {
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    return `${hours}:${minutes}`;
+function generateYears(): number[] {
+    const currentYear = new Date().getFullYear();
+    const years: number[] = [];
+    for (let i = currentYear - 5; i <= currentYear + 1; i++) {
+        years.push(i);
+    }
+    return years;
 }
 
-function formatDateDisplay(date: Date): string {
-    return date.toLocaleDateString([], {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-    });
+function generateDays(year: number, month: number): number[] {
+    const daysInMonth = getDaysInMonth(year, month);
+    return Array.from({ length: daysInMonth }, (_, i) => i + 1);
 }
 
-function formatTimeDisplay(date: Date): string {
-    return date.toLocaleTimeString([], {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-    });
+function generateHours(): number[] {
+    return Array.from({ length: 12 }, (_, i) => i + 1);
+}
+
+function generateMinutes(): number[] {
+    return Array.from({ length: 60 }, (_, i) => i);
+}
+
+interface WheelPickerProps {
+    items: (string | number)[];
+    selectedIndex: number;
+    onSelect: (index: number) => void;
+    width: number;
+    formatItem?: (item: string | number) => string;
+}
+
+function WheelPicker({ items, selectedIndex, onSelect, width, formatItem }: WheelPickerProps) {
+    const { theme, colorScheme } = useTheme();
+    const colors = Colors[colorScheme];
+    const scrollRef = useRef<ScrollView>(null);
+    const [isScrolling, setIsScrolling] = useState(false);
+
+    useEffect(() => {
+        if (!isScrolling && scrollRef.current) {
+            scrollRef.current.scrollTo({
+                y: selectedIndex * ITEM_HEIGHT,
+                animated: false,
+            });
+        }
+    }, [selectedIndex, isScrolling]);
+
+    const handleScroll = (event: any) => {
+        const y = event.nativeEvent.contentOffset.y;
+        const index = Math.round(y / ITEM_HEIGHT);
+        if (index >= 0 && index < items.length && index !== selectedIndex) {
+            onSelect(index);
+        }
+    };
+
+    const handleScrollBegin = () => setIsScrolling(true);
+
+    const handleScrollEnd = (event: any) => {
+        setIsScrolling(false);
+        const y = event.nativeEvent.contentOffset.y;
+        const index = Math.round(y / ITEM_HEIGHT);
+        const clampedIndex = Math.max(0, Math.min(index, items.length - 1));
+
+        scrollRef.current?.scrollTo({
+            y: clampedIndex * ITEM_HEIGHT,
+            animated: true,
+        });
+
+        if (clampedIndex !== selectedIndex) {
+            onSelect(clampedIndex);
+        }
+    };
+
+    const padding = (PICKER_HEIGHT - ITEM_HEIGHT) / 2;
+
+    return (
+        <View style={[styles.wheelContainer, { width }]}>
+            <View
+                style={[
+                    styles.selectionHighlight,
+                    {
+                        backgroundColor: colors.primary + "15",
+                        top: padding,
+                    }
+                ]}
+                pointerEvents="none"
+            />
+            <ScrollView
+                ref={scrollRef}
+                showsVerticalScrollIndicator={false}
+                snapToInterval={ITEM_HEIGHT}
+                decelerationRate="fast"
+                onScroll={handleScroll}
+                onScrollBeginDrag={handleScrollBegin}
+                onMomentumScrollEnd={handleScrollEnd}
+                onScrollEndDrag={handleScrollEnd}
+                scrollEventThrottle={16}
+                contentContainerStyle={{ paddingVertical: padding }}
+            >
+                {items.map((item, index) => {
+                    const isSelected = index === selectedIndex;
+                    const displayText = formatItem ? formatItem(item) : String(item);
+
+                    return (
+                        <Pressable
+                            key={index}
+                            onPress={() => {
+                                onSelect(index);
+                                scrollRef.current?.scrollTo({
+                                    y: index * ITEM_HEIGHT,
+                                    animated: true,
+                                });
+                            }}
+                            style={styles.wheelItem}
+                        >
+                            <ThemedText
+                                type={isSelected ? "bodyMedium" : "body"}
+                                style={{
+                                    color: isSelected ? colors.primary : theme.textSecondary,
+                                    fontWeight: isSelected ? "600" : "400",
+                                    textAlign: "center",
+                                }}
+                            >
+                                {displayText}
+                            </ThemedText>
+                        </Pressable>
+                    );
+                })}
+            </ScrollView>
+        </View>
+    );
 }
 
 export function CustomDateTimePicker({
@@ -55,284 +180,213 @@ export function CustomDateTimePicker({
 }: DateTimePickerProps) {
     const { theme, colorScheme } = useTheme();
     const colors = Colors[colorScheme];
-    const [tempDate, setTempDate] = useState(date);
-    const [activeTab, setActiveTab] = useState<"date" | "time">("date");
 
-    // Android-specific state for sequential picker
-    const [androidPickerMode, setAndroidPickerMode] = useState<"date" | "time" | null>(null);
+    const [selectedMonth, setSelectedMonth] = useState(date.getMonth());
+    const [selectedDay, setSelectedDay] = useState(date.getDate());
+    const [selectedYear, setSelectedYear] = useState(date.getFullYear());
+    const [selectedHour, setSelectedHour] = useState(date.getHours() % 12 || 12);
+    const [selectedMinute, setSelectedMinute] = useState(date.getMinutes());
+    const [selectedAmPm, setSelectedAmPm] = useState(date.getHours() >= 12 ? 1 : 0);
 
-    // Reset tempDate when date prop changes or modal opens
+    const years = generateYears();
+    const days = generateDays(selectedYear, selectedMonth);
+    const hours = generateHours();
+    const minutes = generateMinutes();
+
     useEffect(() => {
         if (isVisible) {
-            setTempDate(date);
-            setActiveTab("date");
-            setAndroidPickerMode(null);
+            setSelectedMonth(date.getMonth());
+            setSelectedDay(date.getDate());
+            setSelectedYear(date.getFullYear());
+            setSelectedHour(date.getHours() % 12 || 12);
+            setSelectedMinute(date.getMinutes());
+            setSelectedAmPm(date.getHours() >= 12 ? 1 : 0);
         }
     }, [isVisible, date]);
 
-    // Web implementation
-    if (Platform.OS === "web") {
-        if (!isVisible) return null;
+    // Adjust day if it exceeds days in selected month
+    useEffect(() => {
+        const maxDay = getDaysInMonth(selectedYear, selectedMonth);
+        if (selectedDay > maxDay) {
+            setSelectedDay(maxDay);
+        }
+    }, [selectedMonth, selectedYear]);
 
-        const handleDateChange = (dateString: string) => {
-            if (!dateString) return;
-            const [year, month, day] = dateString.split("-").map(Number);
-            const newDate = new Date(tempDate);
-            newDate.setFullYear(year, month - 1, day);
-            setTempDate(newDate);
-        };
-
-        const handleTimeChange = (timeString: string) => {
-            if (!timeString) return;
-            const [hours, minutes] = timeString.split(":").map(Number);
-            const newDate = new Date(tempDate);
-            newDate.setHours(hours, minutes);
-            setTempDate(newDate);
-        };
-
-        return (
-            <Modal visible={isVisible} transparent animationType="fade">
-                <Pressable style={[styles.modalOverlay, { backgroundColor: "#00000080" }]} onPress={onCancel}>
-                    <Pressable style={[styles.modalContent, { backgroundColor: theme.backgroundSecondary }]} onPress={(e) => e.stopPropagation()}>
-                        <View style={[styles.header, { borderBottomColor: theme.cardBorder }]}>
-                            <ThemedText type="h4">{title}</ThemedText>
-                        </View>
-
-                        <View style={styles.webPickerContainer}>
-                            {(mode === "date" || mode === "datetime") && (
-                                <View style={styles.webInputGroup}>
-                                    <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.xs }}>
-                                        Date
-                                    </ThemedText>
-                                    <TextInput
-                                        style={[
-                                            styles.webInput,
-                                            {
-                                                backgroundColor: theme.backgroundDefault,
-                                                color: theme.text,
-                                                borderColor: theme.cardBorder,
-                                            },
-                                        ]}
-                                        value={formatDateForInput(tempDate)}
-                                        onChange={(e: any) => handleDateChange(e.target.value)}
-                                        // @ts-ignore - web-specific prop
-                                        type="date"
-                                    />
-                                </View>
-                            )}
-                            {(mode === "time" || mode === "datetime") && (
-                                <View style={styles.webInputGroup}>
-                                    <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.xs }}>
-                                        Time
-                                    </ThemedText>
-                                    <TextInput
-                                        style={[
-                                            styles.webInput,
-                                            {
-                                                backgroundColor: theme.backgroundDefault,
-                                                color: theme.text,
-                                                borderColor: theme.cardBorder,
-                                            },
-                                        ]}
-                                        value={formatTimeForInput(tempDate)}
-                                        onChange={(e: any) => handleTimeChange(e.target.value)}
-                                        // @ts-ignore - web-specific prop
-                                        type="time"
-                                    />
-                                </View>
-                            )}
-                        </View>
-
-                        <View style={[styles.footer, { borderTopColor: theme.cardBorder }]}>
-                            <Pressable onPress={onCancel} style={styles.footerButton}>
-                                <ThemedText type="body" style={{ color: theme.textSecondary }}>Cancel</ThemedText>
-                            </Pressable>
-                            <Pressable onPress={() => onConfirm(tempDate)} style={styles.footerButton}>
-                                <ThemedText type="body" style={{ color: colors.primary, fontWeight: "600" }}>Confirm</ThemedText>
-                            </Pressable>
-                        </View>
-                    </Pressable>
-                </Pressable>
-            </Modal>
-        );
-    }
-
-    // Android - Sequential date then time picker
-    if (Platform.OS === "android") {
-        if (!isVisible) return null;
-
-        // Show native Android picker
-        if (androidPickerMode) {
-            return (
-                <DateTimePicker
-                    value={tempDate}
-                    mode={androidPickerMode}
-                    display="default"
-                    onChange={(event, selectedDate) => {
-                        if (event.type === "dismissed") {
-                            setAndroidPickerMode(null);
-                            return;
-                        }
-                        if (event.type === "set" && selectedDate) {
-                            setTempDate(selectedDate);
-                            if (androidPickerMode === "date" && mode === "datetime") {
-                                // After date, show time picker
-                                setAndroidPickerMode("time");
-                            } else {
-                                // Done - confirm and close
-                                setAndroidPickerMode(null);
-                                onConfirm(selectedDate);
-                            }
-                        }
-                    }}
-                />
-            );
+    const handleConfirm = () => {
+        let hour24 = selectedHour;
+        if (selectedAmPm === 1 && selectedHour !== 12) {
+            hour24 = selectedHour + 12;
+        } else if (selectedAmPm === 0 && selectedHour === 12) {
+            hour24 = 0;
         }
 
-        // Show selection UI
-        return (
-            <Modal visible={isVisible} transparent animationType="fade">
-                <Pressable style={[styles.modalOverlay, { backgroundColor: "#00000080" }]} onPress={onCancel}>
-                    <Pressable style={[styles.modalContent, { backgroundColor: theme.backgroundSecondary }]} onPress={(e) => e.stopPropagation()}>
-                        <View style={[styles.header, { borderBottomColor: theme.cardBorder }]}>
-                            <ThemedText type="h4">{title}</ThemedText>
-                        </View>
-
-                        <View style={styles.androidContainer}>
-                            {(mode === "date" || mode === "datetime") && (
-                                <Pressable
-                                    style={[styles.androidButton, { backgroundColor: theme.backgroundTertiary }]}
-                                    onPress={() => setAndroidPickerMode("date")}
-                                >
-                                    <View style={[styles.androidIconContainer, { backgroundColor: colors.primary + "20" }]}>
-                                        <Feather name="calendar" size={20} color={colors.primary} />
-                                    </View>
-                                    <View style={styles.androidButtonText}>
-                                        <ThemedText type="caption" style={{ color: theme.textSecondary }}>Date</ThemedText>
-                                        <ThemedText type="bodyMedium">{formatDateDisplay(tempDate)}</ThemedText>
-                                    </View>
-                                    <Feather name="chevron-right" size={20} color={theme.textTertiary} />
-                                </Pressable>
-                            )}
-
-                            {(mode === "time" || mode === "datetime") && (
-                                <Pressable
-                                    style={[styles.androidButton, { backgroundColor: theme.backgroundTertiary }]}
-                                    onPress={() => setAndroidPickerMode("time")}
-                                >
-                                    <View style={[styles.androidIconContainer, { backgroundColor: colors.secondary + "20" }]}>
-                                        <Feather name="clock" size={20} color={colors.secondary} />
-                                    </View>
-                                    <View style={styles.androidButtonText}>
-                                        <ThemedText type="caption" style={{ color: theme.textSecondary }}>Time</ThemedText>
-                                        <ThemedText type="bodyMedium">{formatTimeDisplay(tempDate)}</ThemedText>
-                                    </View>
-                                    <Feather name="chevron-right" size={20} color={theme.textTertiary} />
-                                </Pressable>
-                            )}
-                        </View>
-
-                        <View style={styles.androidFooter}>
-                            <Pressable
-                                onPress={onCancel}
-                                style={[styles.androidCancelButton, { backgroundColor: theme.backgroundTertiary }]}
-                            >
-                                <ThemedText type="bodyMedium" style={{ color: theme.textSecondary }}>Cancel</ThemedText>
-                            </Pressable>
-                            <Pressable
-                                onPress={() => onConfirm(tempDate)}
-                                style={[styles.androidConfirmButton, { backgroundColor: colors.primary }, Shadows.coloredLg(colors.primary)]}
-                            >
-                                <ThemedText type="bodyMedium" style={{ color: "#FFFFFF" }}>Confirm</ThemedText>
-                            </Pressable>
-                        </View>
-                    </Pressable>
-                </Pressable>
-            </Modal>
+        const newDate = new Date(
+            selectedYear,
+            selectedMonth,
+            selectedDay,
+            hour24,
+            selectedMinute
         );
-    }
+        onConfirm(newDate);
+    };
 
-    // iOS - Tabbed date/time picker
+    const formatPreview = () => {
+        let hour24 = selectedHour;
+        if (selectedAmPm === 1 && selectedHour !== 12) {
+            hour24 = selectedHour + 12;
+        } else if (selectedAmPm === 0 && selectedHour === 12) {
+            hour24 = 0;
+        }
+
+        const previewDate = new Date(
+            selectedYear,
+            selectedMonth,
+            selectedDay,
+            hour24,
+            selectedMinute
+        );
+
+        if (mode === "date") {
+            return previewDate.toLocaleDateString([], {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+            });
+        }
+        if (mode === "time") {
+            return previewDate.toLocaleTimeString([], {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+            });
+        }
+        return previewDate.toLocaleString([], {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+        });
+    };
+
+    if (!isVisible) return null;
+
+    const screenWidth = Dimensions.get("window").width;
+    const modalWidth = Math.min(screenWidth * 0.9, 380);
+
     return (
         <Modal visible={isVisible} transparent animationType="fade">
-            <Pressable style={[styles.modalOverlay, { backgroundColor: "#00000080" }]} onPress={onCancel}>
-                <Pressable style={[styles.modalContent, { backgroundColor: theme.backgroundSecondary }]} onPress={(e) => e.stopPropagation()}>
+            <Pressable
+                style={[styles.modalOverlay, { backgroundColor: "#00000080" }]}
+                onPress={onCancel}
+            >
+                <Pressable
+                    style={[
+                        styles.modalContent,
+                        { backgroundColor: theme.backgroundSecondary, width: modalWidth }
+                    ]}
+                    onPress={(e) => e.stopPropagation()}
+                >
                     <View style={[styles.header, { borderBottomColor: theme.cardBorder }]}>
                         <ThemedText type="h4">{title}</ThemedText>
                     </View>
 
-                    {mode === "datetime" && (
-                        <View style={[styles.tabContainer, { backgroundColor: theme.backgroundTertiary }]}>
-                            <Pressable
-                                style={[
-                                    styles.tab,
-                                    activeTab === "date" && { backgroundColor: theme.backgroundSecondary },
-                                ]}
-                                onPress={() => setActiveTab("date")}
-                            >
-                                <Feather
-                                    name="calendar"
-                                    size={16}
-                                    color={activeTab === "date" ? colors.primary : theme.textSecondary}
-                                />
-                                <ThemedText
-                                    type="bodyMedium"
-                                    style={{ color: activeTab === "date" ? colors.primary : theme.textSecondary }}
-                                >
-                                    Date
+                    {/* Date Picker */}
+                    {(mode === "date" || mode === "datetime") && (
+                        <View style={styles.section}>
+                            <View style={styles.sectionHeader}>
+                                <Feather name="calendar" size={16} color={colors.primary} />
+                                <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                                    DATE
                                 </ThemedText>
-                            </Pressable>
-                            <Pressable
-                                style={[
-                                    styles.tab,
-                                    activeTab === "time" && { backgroundColor: theme.backgroundSecondary },
-                                ]}
-                                onPress={() => setActiveTab("time")}
-                            >
-                                <Feather
-                                    name="clock"
-                                    size={16}
-                                    color={activeTab === "time" ? colors.primary : theme.textSecondary}
+                            </View>
+                            <View style={styles.pickersRow}>
+                                <WheelPicker
+                                    items={shortMonths}
+                                    selectedIndex={selectedMonth}
+                                    onSelect={setSelectedMonth}
+                                    width={80}
                                 />
-                                <ThemedText
-                                    type="bodyMedium"
-                                    style={{ color: activeTab === "time" ? colors.primary : theme.textSecondary }}
-                                >
-                                    Time
-                                </ThemedText>
-                            </Pressable>
+                                <WheelPicker
+                                    items={days}
+                                    selectedIndex={selectedDay - 1}
+                                    onSelect={(index) => setSelectedDay(index + 1)}
+                                    width={50}
+                                />
+                                <WheelPicker
+                                    items={years}
+                                    selectedIndex={years.indexOf(selectedYear)}
+                                    onSelect={(index) => setSelectedYear(years[index])}
+                                    width={70}
+                                />
+                            </View>
                         </View>
                     )}
 
-                    <View style={styles.pickerContainer}>
-                        <DateTimePicker
-                            value={tempDate}
-                            mode={mode === "datetime" ? activeTab : mode}
-                            display="spinner"
-                            onChange={(_, selectedDate) => {
-                                if (selectedDate) setTempDate(selectedDate);
-                            }}
-                            textColor={theme.text}
-                            themeVariant={colorScheme}
-                        />
+                    {/* Time Picker */}
+                    {(mode === "time" || mode === "datetime") && (
+                        <View style={styles.section}>
+                            <View style={styles.sectionHeader}>
+                                <Feather name="clock" size={16} color={colors.secondary} />
+                                <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                                    TIME
+                                </ThemedText>
+                            </View>
+                            <View style={styles.pickersRow}>
+                                <WheelPicker
+                                    items={hours}
+                                    selectedIndex={selectedHour - 1}
+                                    onSelect={(index) => setSelectedHour(index + 1)}
+                                    width={50}
+                                />
+                                <ThemedText type="h3" style={{ color: theme.textSecondary }}>:</ThemedText>
+                                <WheelPicker
+                                    items={minutes}
+                                    selectedIndex={selectedMinute}
+                                    onSelect={setSelectedMinute}
+                                    width={50}
+                                    formatItem={(item) => String(item).padStart(2, "0")}
+                                />
+                                <WheelPicker
+                                    items={["AM", "PM"]}
+                                    selectedIndex={selectedAmPm}
+                                    onSelect={setSelectedAmPm}
+                                    width={60}
+                                />
+                            </View>
+                        </View>
+                    )}
+
+                    {/* Preview */}
+                    <View style={[styles.previewContainer, { backgroundColor: theme.backgroundTertiary }]}>
+                        <ThemedText type="bodyMedium" style={{ color: colors.primary }}>
+                            {formatPreview()}
+                        </ThemedText>
                     </View>
 
-                    {/* Preview of selected datetime */}
-                    {mode === "datetime" && (
-                        <View style={[styles.previewContainer, { backgroundColor: theme.backgroundTertiary }]}>
-                            <ThemedText type="caption" style={{ color: theme.textSecondary }}>Selected:</ThemedText>
-                            <ThemedText type="bodyMedium" style={{ color: colors.primary }}>
-                                {formatDateDisplay(tempDate)} at {formatTimeDisplay(tempDate)}
+                    {/* Footer */}
+                    <View style={styles.footer}>
+                        <Pressable
+                            onPress={onCancel}
+                            style={[styles.cancelButton, { backgroundColor: theme.backgroundTertiary }]}
+                        >
+                            <ThemedText type="bodyMedium" style={{ color: theme.textSecondary }}>
+                                Cancel
                             </ThemedText>
-                        </View>
-                    )}
-
-                    <View style={[styles.footer, { borderTopColor: theme.cardBorder }]}>
-                        <Pressable onPress={onCancel} style={styles.footerButton}>
-                            <ThemedText type="body" style={{ color: theme.textSecondary }}>Cancel</ThemedText>
                         </Pressable>
-                        <Pressable onPress={() => onConfirm(tempDate)} style={styles.footerButton}>
-                            <ThemedText type="body" style={{ color: colors.primary, fontWeight: "600" }}>Confirm</ThemedText>
+                        <Pressable
+                            onPress={handleConfirm}
+                            style={[
+                                styles.confirmButton,
+                                { backgroundColor: colors.primary },
+                                Shadows.coloredLg(colors.primary)
+                            ]}
+                        >
+                            <ThemedText type="bodyMedium" style={{ color: "#FFFFFF" }}>
+                                Confirm
+                            </ThemedText>
                         </Pressable>
                     </View>
                 </Pressable>
@@ -348,8 +402,6 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     modalContent: {
-        width: "85%",
-        maxWidth: 400,
         borderRadius: BorderRadius.xl,
         overflow: "hidden",
     },
@@ -358,96 +410,61 @@ const styles = StyleSheet.create({
         alignItems: "center",
         borderBottomWidth: StyleSheet.hairlineWidth,
     },
-    tabContainer: {
-        flexDirection: "row",
-        margin: Spacing.lg,
-        marginBottom: 0,
-        borderRadius: BorderRadius.md,
-        padding: Spacing.xs,
+    section: {
+        paddingHorizontal: Spacing.lg,
+        paddingTop: Spacing.lg,
     },
-    tab: {
-        flex: 1,
+    sectionHeader: {
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "center",
         gap: Spacing.sm,
-        paddingVertical: Spacing.sm,
+        marginBottom: Spacing.sm,
+    },
+    pickersRow: {
+        flexDirection: "row",
+        justifyContent: "center",
+        alignItems: "center",
+        gap: Spacing.sm,
+        height: PICKER_HEIGHT,
+    },
+    wheelContainer: {
+        height: PICKER_HEIGHT,
+        overflow: "hidden",
+    },
+    selectionHighlight: {
+        position: "absolute",
+        left: 0,
+        right: 0,
+        height: ITEM_HEIGHT,
         borderRadius: BorderRadius.sm,
     },
-    pickerContainer: {
-        height: 200,
+    wheelItem: {
+        height: ITEM_HEIGHT,
         justifyContent: "center",
+        alignItems: "center",
     },
     previewContainer: {
-        marginHorizontal: Spacing.lg,
-        marginBottom: Spacing.lg,
+        margin: Spacing.lg,
         padding: Spacing.md,
-        borderRadius: BorderRadius.md,
-        alignItems: "center",
-        gap: Spacing.xs,
-    },
-    webPickerContainer: {
-        padding: Spacing.xl,
-        gap: Spacing.lg,
-    },
-    webInputGroup: {
-        width: "100%",
-    },
-    webInput: {
-        width: "100%",
-        padding: Spacing.md,
-        borderRadius: BorderRadius.md,
-        borderWidth: 1,
-        fontSize: 16,
-    },
-    androidContainer: {
-        padding: Spacing.lg,
-        gap: Spacing.md,
-    },
-    androidButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        padding: Spacing.lg,
-        borderRadius: BorderRadius.md,
-        gap: Spacing.md,
-    },
-    androidIconContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: BorderRadius.sm,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    androidButtonText: {
-        flex: 1,
-        gap: 2,
-    },
-    androidFooter: {
-        flexDirection: "row",
-        padding: Spacing.lg,
-        paddingTop: Spacing.sm,
-        gap: Spacing.md,
-    },
-    androidCancelButton: {
-        flex: 1,
-        padding: Spacing.lg,
-        borderRadius: BorderRadius.md,
-        alignItems: "center",
-    },
-    androidConfirmButton: {
-        flex: 1,
-        padding: Spacing.lg,
         borderRadius: BorderRadius.md,
         alignItems: "center",
     },
     footer: {
         flexDirection: "row",
-        borderTopWidth: StyleSheet.hairlineWidth,
+        padding: Spacing.lg,
+        paddingTop: 0,
+        gap: Spacing.md,
     },
-    footerButton: {
+    cancelButton: {
         flex: 1,
         padding: Spacing.lg,
+        borderRadius: BorderRadius.md,
         alignItems: "center",
-        justifyContent: "center",
+    },
+    confirmButton: {
+        flex: 1,
+        padding: Spacing.lg,
+        borderRadius: BorderRadius.md,
+        alignItems: "center",
     },
 });
