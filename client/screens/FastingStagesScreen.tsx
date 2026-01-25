@@ -26,6 +26,7 @@ import { RootStackParamList } from "@/navigation/RootStackNavigator";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const STAGE_ICON_SIZE = 56;
+const HEADER_HEIGHT = 44; // Standard iOS header height
 
 type FastingStagesRouteProp = RouteProp<RootStackParamList, "FastingStages">;
 
@@ -138,7 +139,7 @@ export default function FastingStagesScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
+    <View style={[styles.container, { backgroundColor: theme.backgroundRoot, paddingTop: insets.top + HEADER_HEIGHT }]}>
       <View style={styles.timelineContainer}>
         <FlatList
           ref={flatListRef}
@@ -274,8 +275,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   timelineContainer: {
-    paddingTop: Spacing["2xl"],
-    paddingBottom: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.05)",
   },
