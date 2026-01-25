@@ -26,7 +26,7 @@ import { RootStackParamList } from "@/navigation/RootStackNavigator";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const STAGE_ICON_SIZE = 56;
-const HEADER_HEIGHT = 44; // Standard iOS header height
+const HEADER_HEIGHT = 56; // Navigation header height with extra spacing
 
 type FastingStagesRouteProp = RouteProp<RootStackParamList, "FastingStages">;
 
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   timelineContainer: {
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.lg,
     paddingBottom: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.05)",
