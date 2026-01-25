@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, StyleSheet, Pressable, TextInput, Switch, Alert, Image, NativeModules } from "react-native";
+import { View, StyleSheet, Pressable, TextInput, Switch, Alert, Image, NativeModules, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -10,9 +10,10 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import * as Updates from "expo-updates";
+
+import { safeHaptics, showAlert, showConfirm } from "@/lib/platform";
 
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { ThemedText } from "@/components/ThemedText";
@@ -156,19 +157,19 @@ export default function ProfileScreen() {
 
   const handleSaveProfile = async () => {
     await saveProfile(profile);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    safeHaptics.notificationAsync();
     setIsEditing(false);
   };
 
   const handleAvatarSelect = (avatarId: number) => {
-    Haptics.selectionAsync();
+    safeHaptics.selectionAsync();
     setProfile((prev) => ({ ...prev, avatarId }));
   };
 
   const handleAddWeight = async () => {
     const weight = parseFloat(newWeight);
     if (isNaN(weight) || weight <= 0) {
-      Alert.alert("Invalid Weight", "Please enter a valid weight.");
+      showAlert("Invalid Weight", "Please enter a valid weight.");
       return;
     }
 
@@ -181,7 +182,7 @@ export default function ProfileScreen() {
     await saveWeight(entry);
     setWeights((prev) => [entry, ...prev]);
     setNewWeight("");
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    safeHaptics.notificationAsync();
   };
 
   const handleEditFast = (fast: Fast) => {
@@ -191,30 +192,26 @@ export default function ProfileScreen() {
 
   const handleDeleteFast = async (id: string) => {
     await deleteFast(id);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    safeHaptics.notificationAsync();
   };
 
   const handleUpdateFast = async (id: string, updates: Partial<Fast>) => {
     await updateFast(id, updates);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    safeHaptics.notificationAsync();
   };
 
-  const handleCancelFast = () => {
-    Alert.alert(
+  const handleCancelFast = async () => {
+    const confirmed = await showConfirm(
       "Cancel Current Fast",
       "Are you sure you want to cancel your active fast? This session will not be saved.",
-      [
-        { text: "Keep Fasting", style: "cancel" },
-        {
-          text: "Cancel Fast",
-          style: "destructive",
-          onPress: async () => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            await cancelFast();
-          }
-        }
-      ]
+      "Cancel Fast",
+      "Keep Fasting",
+      true
     );
+    if (confirmed) {
+      safeHaptics.notificationAsync();
+      await cancelFast();
+    }
   };
 
   const handlePickImage = async () => {
@@ -226,7 +223,7 @@ export default function ProfileScreen() {
     });
 
     if (!result.canceled && result.assets[0].uri) {
-      Haptics.selectionAsync();
+      safeHaptics.selectionAsync();
       // Reset standard avatar ID to -1 or keep it as fallback? 
       // Let's keep avatarId but prefer customAvatarUri if present.
       // Or set avatarId to a specific "custom" value like -1.
@@ -360,7 +357,7 @@ export default function ProfileScreen() {
             <View style={styles.editButtons}>
               <Pressable
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  safeHaptics.impactAsync();
                   setIsEditing(false);
                   loadData();
                 }}
@@ -386,7 +383,7 @@ export default function ProfileScreen() {
             profile={profile}
             totalHours={stats.totalHours}
             onEdit={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              safeHaptics.impactAsync();
               setIsEditing(true);
             }}
             AVATARS={AVATARS}
@@ -538,7 +535,7 @@ export default function ProfileScreen() {
                 <Pressable
                   key={t}
                   onPress={() => {
-                    Haptics.selectionAsync();
+                    safeHaptics.selectionAsync();
                     if (setThemeType) setThemeType(t);
                   }}
                   style={[
@@ -585,7 +582,7 @@ export default function ProfileScreen() {
               <Switch
                 value={profile.notificationsEnabled}
                 onValueChange={(value) => {
-                  Haptics.selectionAsync();
+                  safeHaptics.selectionAsync();
                   setProfile((prev) => ({ ...prev, notificationsEnabled: value }));
                   saveProfile({ ...profile, notificationsEnabled: value });
                 }}
@@ -598,7 +595,7 @@ export default function ProfileScreen() {
 
             <Pressable
               onPress={() => {
-                Haptics.selectionAsync();
+                safeHaptics.selectionAsync();
                 const newUnit = profile.weightUnit === "lbs" ? "kg" : "lbs";
                 setProfile((prev) => ({ ...prev, weightUnit: newUnit }));
                 saveProfile({ ...profile, weightUnit: newUnit });
@@ -626,40 +623,33 @@ export default function ProfileScreen() {
             <View style={[styles.settingDivider, { backgroundColor: theme.cardBorder }]} />
 
             <Pressable
-              onPress={() => {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-                Alert.alert(
+              onPress={async () => {
+                safeHaptics.notificationAsync();
+                const confirmed = await showConfirm(
                   "Delete All Data",
                   "Are you sure you want to delete all your history and settings? This action cannot be undone.",
-                  [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Delete",
-                      style: "destructive",
-                      onPress: async () => {
-                        await clearAllData();
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                        Alert.alert("Data Cleared", "The app will now restart.", [
-                          {
-                            text: "OK", onPress: async () => {
-                              try {
-                                await Updates.reloadAsync();
-                              } catch (e) {
-                                // Fallback for dev environment
-                                if (NativeModules.DevSettings) {
-                                  NativeModules.DevSettings.reload();
-                                } else {
-                                  loadData();
-                                  refresh();
-                                }
-                              }
-                            }
-                          }
-                        ]);
-                      },
-                    },
-                  ]
+                  "Delete",
+                  "Cancel",
+                  true
                 );
+                if (confirmed) {
+                  await clearAllData();
+                  safeHaptics.notificationAsync();
+                  showAlert("Data Cleared", "The app will now restart.");
+                  try {
+                    await Updates.reloadAsync();
+                  } catch (e) {
+                    // Fallback for dev/web environment
+                    if (Platform.OS === "web") {
+                      window.location.reload();
+                    } else if (NativeModules.DevSettings) {
+                      NativeModules.DevSettings.reload();
+                    } else {
+                      loadData();
+                      refresh();
+                    }
+                  }
+                }
               }}
               style={styles.settingRow}
             >
@@ -679,28 +669,26 @@ export default function ProfileScreen() {
             <View style={[styles.settingDivider, { backgroundColor: theme.cardBorder }]} />
 
             <Pressable
-              onPress={() => {
-                Alert.alert(
+              onPress={async () => {
+                const confirmed = await showConfirm(
                   "Restart App",
                   "This will reload the app.",
-                  [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Restart",
-                      onPress: async () => {
-                        try {
-                          await Updates.reloadAsync();
-                        } catch (e) {
-                          if (NativeModules.DevSettings) {
-                            NativeModules.DevSettings.reload();
-                          } else {
-                            Alert.alert("Error", "Could not reload. Please restart manually.");
-                          }
-                        }
-                      },
-                    },
-                  ]
+                  "Restart",
+                  "Cancel"
                 );
+                if (confirmed) {
+                  try {
+                    await Updates.reloadAsync();
+                  } catch (e) {
+                    if (Platform.OS === "web") {
+                      window.location.reload();
+                    } else if (NativeModules.DevSettings) {
+                      NativeModules.DevSettings.reload();
+                    } else {
+                      showAlert("Error", "Could not reload. Please restart manually.");
+                    }
+                  }
+                }
               }}
               style={styles.settingRow}
             >

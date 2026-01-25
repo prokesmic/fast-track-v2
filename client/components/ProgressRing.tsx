@@ -14,7 +14,7 @@ import Animated, {
 import { useTheme } from "@/hooks/useTheme";
 import { Colors, Shadows, BorderRadius } from "@/constants/theme";
 import { Feather } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+import { safeHaptics } from "@/lib/platform";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -164,7 +164,7 @@ export function ProgressRing({
     : [];
 
   const handleMilestonePress = (milestone: Milestone) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    safeHaptics.impactAsync();
     onMilestonePress?.(milestone);
   };
 

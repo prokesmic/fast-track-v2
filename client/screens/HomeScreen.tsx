@@ -14,7 +14,8 @@ import Animated, {
   withTiming,
   withSpring,
 } from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
+
+import { safeHaptics, showAlert } from "@/lib/platform";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ProgressRing, Milestone, RING_MILESTONES } from "@/components/ProgressRing";
@@ -232,7 +233,7 @@ export default function HomeScreen() {
   }, [activeFast]);
 
   const handleStartFast = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    safeHaptics.impactAsync();
     navigation.navigate("StartFast", {});
   };
 
@@ -247,11 +248,7 @@ export default function HomeScreen() {
 
     const doEndFast = async () => {
       try {
-        Haptics.notificationAsync(
-          completed
-            ? Haptics.NotificationFeedbackType.Success
-            : Haptics.NotificationFeedbackType.Warning
-        );
+        safeHaptics.notificationAsync();
         await endFast(completed);
       } catch (error) {
         console.error("Error ending fast:", error);
@@ -335,8 +332,8 @@ export default function HomeScreen() {
     const nextTarget = milestones.find(m => m > currentTarget) || currentTarget + 2;
 
     await updateFast(activeFast.id, { targetDuration: nextTarget });
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert("Goal Updated", `Your fasting goal has been extended to ${nextTarget} hours.`);
+    safeHaptics.notificationAsync();
+    showAlert("Goal Updated", `Your fasting goal has been extended to ${nextTarget} hours.`);
   };
 
   const extensionMilestone = activeFast ? [16, 18, 20, 24, 36, 48, 72].find(m => m > activeFast.targetDuration) || activeFast.targetDuration + 2 : undefined;

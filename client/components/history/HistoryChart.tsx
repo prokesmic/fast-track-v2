@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, StyleSheet, Dimensions, Pressable } from "react-native";
 import Svg, { Rect, Line, Text as SvgText } from "react-native-svg";
-import * as Haptics from "expo-haptics";
+import { safeHaptics } from "@/lib/platform";
 import Animated, { useAnimatedProps, withSpring, useSharedValue } from "react-native-reanimated";
 
 import { ThemedText } from "@/components/ThemedText";
@@ -35,7 +35,7 @@ export function HistoryChart({ data, maxHours = 24 }: HistoryChartProps) {
     const spacing = Spacing.md;
 
     const handlePress = (day: DayData) => {
-        Haptics.selectionAsync();
+        safeHaptics.selectionAsync();
         setSelectedDay(day === selectedDay ? null : day);
     };
 

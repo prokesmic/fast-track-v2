@@ -5,7 +5,8 @@ import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { HeaderButton } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+
+import { safeHaptics } from "@/lib/platform";
 
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button";
@@ -45,7 +46,7 @@ export default function PlanDetailModal() {
   }, [navigation, theme, plan]);
 
   const handleStartFast = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    safeHaptics.impactAsync();
     navigation.replace("StartFast", { plan });
   };
 

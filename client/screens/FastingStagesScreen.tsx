@@ -15,7 +15,8 @@ import Animated, {
   withSpring,
   useSharedValue,
 } from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
+
+import { safeHaptics } from "@/lib/platform";
 
 import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks/useTheme";
@@ -114,7 +115,7 @@ export default function FastingStagesScreen() {
   }, []);
 
   const handleStageSelect = (stage: FastingStage) => {
-    Haptics.selectionAsync();
+    safeHaptics.selectionAsync();
     setSelectedStage(stage);
   };
 

@@ -1,11 +1,12 @@
 import React from "react";
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { View, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/ThemedText";
 import { GlassCard } from "@/components/GlassCard";
 import { useTheme } from "@/hooks/useTheme";
 import { Spacing, BorderRadius, Colors } from "@/constants/theme";
 import { BADGES } from "@/constants/badges";
+import { showAlert } from "@/lib/platform";
 
 interface BadgesSectionProps {
     unlockedBadges: string[];
@@ -18,8 +19,8 @@ export function BadgesSection({ unlockedBadges }: BadgesSectionProps) {
 
     const handleBadgePress = (badge: typeof BADGES[0]) => {
         const isUnlocked = unlockedSet.has(badge.id);
-        Alert.alert(
-            isUnlocked ? "Badge Unlocked! 🎉" : "Badge Locked 🔒",
+        showAlert(
+            isUnlocked ? "Badge Unlocked!" : "Badge Locked",
             `${badge.description}\n\n${isUnlocked ? "You have earned this badge." : "Keep fasting to unlock this badge."}`
         );
     };

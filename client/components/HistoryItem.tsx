@@ -1,7 +1,7 @@
 import React from "react";
-import { View, StyleSheet, Pressable, Alert } from "react-native";
+import { View, StyleSheet, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+import { safeHaptics, showConfirm } from "@/lib/platform";
 
 import { ThemedText } from "@/components/ThemedText";
 import { GlassCard } from "@/components/GlassCard";
@@ -25,20 +25,18 @@ export function HistoryItem({ fast, onEdit, onDelete }: HistoryItemProps) {
     const startTime = new Date(fast.startTime);
     const endTime = fast.endTime ? new Date(fast.endTime) : null;
 
-    const handleDelete = () => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        Alert.alert(
+    const handleDelete = async () => {
+        safeHaptics.notificationAsync();
+        const confirmed = await showConfirm(
             "Delete Fast",
             "Are you sure you want to delete this fast? This cannot be undone.",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: () => onDelete(fast.id)
-                }
-            ]
+            "Delete",
+            "Cancel",
+            true
         );
+        if (confirmed) {
+            onDelete(fast.id);
+        }
     };
 
     return (

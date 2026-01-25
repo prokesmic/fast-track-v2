@@ -28,8 +28,8 @@ export function MetabolicStages({ elapsedHours }: MetabolicStagesProps) {
 
     React.useEffect(() => {
         if (hoursInStage < 0.1) {
-            import("expo-haptics").then(Haptics => {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            import("@/lib/platform").then(({ safeHaptics }) => {
+                safeHaptics.notificationAsync();
             });
         }
     }, [currentStage.id]);

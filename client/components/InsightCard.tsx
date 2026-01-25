@@ -6,7 +6,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
+import { safeHaptics } from "@/lib/platform";
 
 import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks/useTheme";
@@ -39,7 +39,7 @@ export function InsightCard({ title, description, icon, color, onPress }: Insigh
   };
 
   const handlePress = () => {
-    Haptics.selectionAsync();
+    safeHaptics.selectionAsync();
     onPress?.();
   };
 

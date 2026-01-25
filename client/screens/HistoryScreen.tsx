@@ -9,7 +9,8 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
+
+import { safeHaptics } from "@/lib/platform";
 
 import { ThemedText } from "@/components/ThemedText";
 import { CalendarHeatmap } from "@/components/CalendarHeatmap";
@@ -275,12 +276,12 @@ export default function HistoryScreen() {
   );
 
   const handleFilterChange = (newFilter: FilterType) => {
-    Haptics.selectionAsync();
+    safeHaptics.selectionAsync();
     setFilter(newFilter);
   };
 
   const handleViewChange = (newView: ViewType) => {
-    Haptics.selectionAsync();
+    safeHaptics.selectionAsync();
     setViewType(newView);
   };
 
@@ -384,7 +385,7 @@ export default function HistoryScreen() {
                   <View style={styles.monthNav}>
                     <Pressable
                       onPress={() => {
-                        Haptics.selectionAsync();
+                        safeHaptics.selectionAsync();
                         const prev = new Date(selectedMonth);
                         prev.setMonth(prev.getMonth() - 1);
                         setSelectedMonth(prev);
@@ -399,7 +400,7 @@ export default function HistoryScreen() {
                     </ThemedText>
                     <Pressable
                       onPress={() => {
-                        Haptics.selectionAsync();
+                        safeHaptics.selectionAsync();
                         const next = new Date(selectedMonth);
                         next.setMonth(next.getMonth() + 1);
                         setSelectedMonth(next);
@@ -415,7 +416,7 @@ export default function HistoryScreen() {
                   month={selectedMonth}
                   fastDays={calendarFastDays}
                   onDayPress={(date) => {
-                    Haptics.selectionAsync();
+                    safeHaptics.selectionAsync();
                   }}
                 />
               </GlassCard>

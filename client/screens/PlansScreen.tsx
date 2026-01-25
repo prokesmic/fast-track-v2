@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { ScrollView, StyleSheet, View, Pressable, Alert, Platform } from "react-native";
+import { ScrollView, StyleSheet, View, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -10,7 +10,8 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
+
+import { safeHaptics, showConfirm } from "@/lib/platform";
 
 import { ThemedText } from "@/components/ThemedText";
 import { GlassCard } from "@/components/GlassCard";
@@ -101,7 +102,7 @@ function PlanCard({ plan, onPress, onStartPress, accentColor, hasActiveFast }: P
         <Pressable
           onPress={(e) => {
             e.stopPropagation();
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            safeHaptics.impactAsync();
             onStartPress();
           }}
           style={({ pressed }) => [
@@ -138,45 +139,46 @@ export default function PlansScreen() {
   );
 
   const handlePlanPress = (plan: (typeof FASTING_PLANS)[0]) => {
-    Haptics.selectionAsync();
+    safeHaptics.selectionAsync();
     navigation.navigate("PlanDetail", { plan });
   };
 
   const handleStartPress = (plan: (typeof FASTING_PLANS)[0]) => {
     const proceed = () => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      safeHaptics.impactAsync();
       navigation.navigate("StartFast", { plan });
     };
 
     if (activeFast) {
-      Alert.alert(
+      showConfirm(
         "Switch Plan?",
         "You currently have an active fast. Starting a new plan will end your current session. Do you want to continue?",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Switch & Restart", style: "destructive", onPress: proceed }
-        ]
-      );
+        "Switch & Restart",
+        "Cancel",
+        true
+      ).then((confirmed) => {
+        if (confirmed) proceed();
+      });
     } else {
       proceed();
     }
   };
 
-  const handleCustomPress = () => {
+  const handleCustomPress = async () => {
     const proceed = () => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      safeHaptics.impactAsync();
       navigation.navigate("StartFast", { isCustom: true });
     };
 
     if (activeFast) {
-      Alert.alert(
+      const confirmed = await showConfirm(
         "Switch Plan?",
         "You currently have an active fast. Starting a new plan will end your current session. Do you want to continue?",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Switch & Restart", style: "destructive", onPress: proceed }
-        ]
+        "Switch & Restart",
+        "Cancel",
+        true
       );
+      if (confirmed) proceed();
     } else {
       proceed();
     }

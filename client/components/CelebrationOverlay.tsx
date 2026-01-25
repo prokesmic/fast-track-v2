@@ -9,7 +9,7 @@ import Animated, {
     withDelay,
     withSequence,
 } from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
+import { safeHaptics } from "@/lib/platform";
 
 import { ThemedText } from "@/components/ThemedText";
 import { GlassCard } from "@/components/GlassCard";
@@ -61,7 +61,7 @@ export function CelebrationOverlay({
 
             // 3. Explode (hide cup, show particles)
             setTimeout(() => {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                safeHaptics.notificationAsync();
                 setShowExplosion(true);
                 // "Pop" the cup out or just hide it? Let's make it fade/scale out as if it exploded
                 scale.value = withTiming(1.5, { duration: 150 });

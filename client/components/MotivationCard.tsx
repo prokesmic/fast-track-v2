@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, StyleSheet, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
+import { safeHaptics } from "@/lib/platform";
 
 import { ThemedText } from "@/components/ThemedText";
 import { GlassCard } from "@/components/GlassCard";
@@ -36,7 +36,7 @@ export function MotivationCard({ progress, isOvertime = false }: MotivationCardP
     }, [isOvertime, Math.floor((progress || 0) * 10)]); // Update roughly every 10%
 
     const handleRefresh = () => {
-        Haptics.selectionAsync();
+        safeHaptics.selectionAsync();
         if (progress !== undefined) {
             setQuote(getQuoteForProgress(progress, isOvertime));
         } else {

@@ -12,7 +12,7 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import { Feather } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+import { safeHaptics } from "@/lib/platform";
 import { useTheme } from "@/hooks/useTheme";
 import { Colors, Shadows } from "@/constants/theme";
 
@@ -75,7 +75,7 @@ export function FAB({ onPress, icon = "plus" }: FABProps) {
   };
 
   const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    safeHaptics.impactAsync();
     onPress();
   };
 

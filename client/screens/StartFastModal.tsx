@@ -11,7 +11,8 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
+
+import { safeHaptics } from "@/lib/platform";
 
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { ThemedText } from "@/components/ThemedText";
@@ -145,7 +146,7 @@ function DurationSlider({
         onPanResponderGrant: () => {
           setIsDragging(true);
           setLocalX(valueToX(value));
-          Haptics.selectionAsync();
+          safeHaptics.selectionAsync();
         },
         onPanResponderMove: (_, gestureState) => {
           // Use gestureStartX + dx logic if we stored startX, but here we can just map simple touches for a simple slider
@@ -181,7 +182,7 @@ function DurationSlider({
     onMoveShouldSetPanResponder: () => true,
     onPanResponderGrant: () => {
       setIsDragging(true);
-      Haptics.selectionAsync();
+      safeHaptics.selectionAsync();
     },
     onPanResponderMove: (_, gestureState) => {
       const newX = Math.max(0, Math.min(trackWidth, currentXRef.current + gestureState.dx));
@@ -202,7 +203,7 @@ function DurationSlider({
       const finalValue = xToValue(newX);
       setIsDragging(false);
       onChange(finalValue);
-      Haptics.selectionAsync();
+      safeHaptics.selectionAsync();
     },
   }), [value, min, max, onChange]); // Re-create if value changes to keep closures fresh? 
   // Rerendering PanResponder on every frame is bad (terminates gesture).
@@ -239,7 +240,7 @@ function DurationSlider({
     onPanResponderGrant: () => {
       setIsDragging(true);
       startX.current = currentXRef.current;
-      Haptics.selectionAsync();
+      safeHaptics.selectionAsync();
     },
     onPanResponderMove: (_, gestureState) => {
       const newX = Math.max(0, Math.min(trackWidth, startX.current + gestureState.dx));
@@ -263,7 +264,7 @@ function DurationSlider({
       setIsDragging(false);
       onChange(finalValue); // Commit value
       setLocalX(valueToX(finalValue)); // Snap to perfect integer position
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      safeHaptics.notificationAsync();
     }
   }), []);
 
@@ -414,18 +415,18 @@ export default function StartFastModal() {
     const planId = isCustom ? "custom" : (selectedPlan?.id || "16-8");
 
     await startFast(planId, planName, duration, startTime.getTime(), note || undefined);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    safeHaptics.notificationAsync();
     navigation.goBack();
   };
 
   const handlePlanSelect = (plan: FastingPlan) => {
-    Haptics.selectionAsync();
+    safeHaptics.selectionAsync();
     setSelectedPlan(plan);
     setIsCustom(false);
   };
 
   const handleCustomSelect = () => {
-    Haptics.selectionAsync();
+    safeHaptics.selectionAsync();
     setSelectedPlan(null);
     setIsCustom(true);
   };

@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { View, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/ThemedText";
@@ -11,6 +11,7 @@ import { BADGES, Badge } from "@/constants/badges";
 import { useFasting } from "@/hooks/useFasting";
 import { UserProfile, getProfile } from "@/lib/storage";
 import { useFocusEffect } from "@react-navigation/native";
+import { showAlert } from "@/lib/platform";
 
 export default function BadgesScreen() {
     const insets = useSafeAreaInsets();
@@ -27,8 +28,8 @@ export default function BadgesScreen() {
 
     const handleBadgePress = (badge: Badge) => {
         const isUnlocked = unlockedBadges.has(badge.id);
-        Alert.alert(
-            isUnlocked ? "Badge Unlocked! 🎉" : "Badge Locked 🔒",
+        showAlert(
+            isUnlocked ? "Badge Unlocked!" : "Badge Locked",
             `${badge.description}\n\n${isUnlocked ? "You have earned this badge." : "Keep fasting to unlock this badge."}`
         );
     };
