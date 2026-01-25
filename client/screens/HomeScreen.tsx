@@ -360,7 +360,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View>
             <ThemedText style={styles.greeting}>
-              {greeting}
+              {getGreeting()}
             </ThemedText>
             <ThemedText style={styles.title}>FastTrack <ThemedText style={{ fontSize: 12, opacity: 0.5 }}>(v2.4 FINAL)</ThemedText></ThemedText>
           </View>
