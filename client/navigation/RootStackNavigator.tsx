@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import MainTabNavigator from "@/navigation/MainTabNavigator";
 import StartFastModal from "@/screens/StartFastModal";
@@ -6,8 +6,10 @@ import PlanDetailModal from "@/screens/PlanDetailModal";
 import FastingStagesScreen from "@/screens/FastingStagesScreen";
 import LoginScreen from "@/screens/LoginScreen";
 import RegisterScreen from "@/screens/RegisterScreen";
+import OnboardingScreen from "@/screens/OnboardingScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 import BadgesScreen from "@/screens/BadgesScreen";
+import { getFasts, getProfile } from "@/lib/storage";
 
 export type FastingPlan = {
   id: string;
@@ -22,6 +24,7 @@ export type FastingPlan = {
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
+  Onboarding: undefined;
   Main: undefined;
   StartFast: { plan?: FastingPlan; isCustom?: boolean };
   PlanDetail: { plan: FastingPlan };
@@ -33,9 +36,32 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootStackNavigator() {
   const screenOptions = useScreenOptions();
+  const [shouldShowOnboarding, setShouldShowOnboarding] = useState<boolean | null>(null);
+
+  // Check if user should see onboarding
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      try {
+        const [fasts, profile] = await Promise.all([getFasts(), getProfile()]);
+        // Show onboarding if no fasts and onboarding not completed
+        const showOnboarding = fasts.length === 0 && !profile.onboardingCompleted;
+        setShouldShowOnboarding(showOnboarding);
+      } catch {
+        setShouldShowOnboarding(false);
+      }
+    };
+    checkOnboarding();
+  }, []);
+
+  // Don't render until we know whether to show onboarding
+  if (shouldShowOnboarding === null) {
+    return null;
+  }
+
+  const initialRouteName = shouldShowOnboarding ? "Onboarding" : "Main";
 
   return (
-    <Stack.Navigator screenOptions={screenOptions} initialRouteName="Main">
+    <Stack.Navigator screenOptions={screenOptions} initialRouteName={initialRouteName}>
       <Stack.Screen
         name="Login"
         component={LoginScreen}
@@ -44,6 +70,11 @@ export default function RootStackNavigator() {
       <Stack.Screen
         name="Register"
         component={RegisterScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Onboarding"
+        component={OnboardingScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen

@@ -18,6 +18,11 @@ export interface UserProfile {
   notificationsEnabled: boolean;
   unlockedBadges: string[];
   customAvatarUri?: string;
+  // Onboarding fields
+  fastingGoal?: string;
+  experienceLevel?: string;
+  preferredPlanId?: string;
+  onboardingCompleted?: boolean;
 }
 
 export interface WeightEntry {

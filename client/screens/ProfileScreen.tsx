@@ -18,6 +18,7 @@ import { safeHaptics, showAlert, showConfirm } from "@/lib/platform";
 import { useAuth } from "@/context/AuthContext";
 import { performFullSync, getLastSyncTime } from "@/lib/sync";
 import { useSync } from "@/components/SyncManager";
+import { useNotifications } from "@/hooks/useNotifications";
 
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { ThemedText } from "@/components/ThemedText";
@@ -131,6 +132,14 @@ export default function ProfileScreen() {
   const { stats, refresh, fasts, activeFast, cancelFast, deleteFast, updateFast } = useFasting();
   const { user, isAuthenticated, logout } = useAuth();
   const { syncStatus, lastSyncTime: globalLastSyncTime, syncNow } = useSync();
+  const {
+    isSupported: notificationsSupported,
+    isEnabled: notificationsEnabled,
+    settings: notificationSettings,
+    enableNotifications,
+    disableNotifications,
+    updateSettings: updateNotificationSettings,
+  } = useNotifications();
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
@@ -646,23 +655,100 @@ export default function ProfileScreen() {
                   <Feather name="bell" size={18} color={colors.primary} />
                 </View>
                 <View>
-                  <ThemedText type="bodyMedium">Notifications</ThemedText>
+                  <ThemedText type="bodyMedium">Push Notifications</ThemedText>
                   <ThemedText type="caption" style={{ color: theme.textSecondary }}>
-                    Fast reminders
+                    {notificationsSupported
+                      ? notificationsEnabled
+                        ? "Enabled"
+                        : "Tap to enable"
+                      : "Not available on this device"}
                   </ThemedText>
                 </View>
               </View>
               <Switch
-                value={profile.notificationsEnabled}
-                onValueChange={(value) => {
+                value={notificationsEnabled}
+                disabled={!notificationsSupported}
+                onValueChange={async (value) => {
                   safeHaptics.selectionAsync();
+                  if (value) {
+                    const success = await enableNotifications();
+                    if (!success) {
+                      showAlert(
+                        "Permission Required",
+                        "Please enable notifications in your device settings."
+                      );
+                    }
+                  } else {
+                    await disableNotifications();
+                  }
+                  // Also update local profile
                   setProfile((prev) => ({ ...prev, notificationsEnabled: value }));
                   saveProfile({ ...profile, notificationsEnabled: value });
                 }}
                 trackColor={{ false: theme.backgroundTertiary, true: colors.primary + "50" }}
-                thumbColor={profile.notificationsEnabled ? colors.primary : theme.textTertiary}
+                thumbColor={notificationsEnabled ? colors.primary : theme.textTertiary}
               />
             </View>
+
+            {/* Notification Settings (only show when enabled) */}
+            {notificationsEnabled && notificationSettings && (
+              <>
+                <View style={[styles.notificationSubSettings, { marginLeft: 56 }]}>
+                  <View style={styles.notificationOption}>
+                    <ThemedText type="caption" style={{ flex: 1 }}>Fast reminders</ThemedText>
+                    <Switch
+                      value={notificationSettings.fastReminder}
+                      onValueChange={(value) => {
+                        safeHaptics.selectionAsync();
+                        updateNotificationSettings({ fastReminder: value });
+                      }}
+                      trackColor={{ false: theme.backgroundTertiary, true: colors.primary + "50" }}
+                      thumbColor={notificationSettings.fastReminder ? colors.primary : theme.textTertiary}
+                      style={{ transform: [{ scale: 0.8 }] }}
+                    />
+                  </View>
+                  <View style={styles.notificationOption}>
+                    <ThemedText type="caption" style={{ flex: 1 }}>Milestone alerts</ThemedText>
+                    <Switch
+                      value={notificationSettings.milestoneReached}
+                      onValueChange={(value) => {
+                        safeHaptics.selectionAsync();
+                        updateNotificationSettings({ milestoneReached: value });
+                      }}
+                      trackColor={{ false: theme.backgroundTertiary, true: colors.primary + "50" }}
+                      thumbColor={notificationSettings.milestoneReached ? colors.primary : theme.textTertiary}
+                      style={{ transform: [{ scale: 0.8 }] }}
+                    />
+                  </View>
+                  <View style={styles.notificationOption}>
+                    <ThemedText type="caption" style={{ flex: 1 }}>Streak at risk</ThemedText>
+                    <Switch
+                      value={notificationSettings.streakAtRisk}
+                      onValueChange={(value) => {
+                        safeHaptics.selectionAsync();
+                        updateNotificationSettings({ streakAtRisk: value });
+                      }}
+                      trackColor={{ false: theme.backgroundTertiary, true: colors.primary + "50" }}
+                      thumbColor={notificationSettings.streakAtRisk ? colors.primary : theme.textTertiary}
+                      style={{ transform: [{ scale: 0.8 }] }}
+                    />
+                  </View>
+                  <View style={styles.notificationOption}>
+                    <ThemedText type="caption" style={{ flex: 1 }}>Daily motivation</ThemedText>
+                    <Switch
+                      value={notificationSettings.dailyMotivation}
+                      onValueChange={(value) => {
+                        safeHaptics.selectionAsync();
+                        updateNotificationSettings({ dailyMotivation: value });
+                      }}
+                      trackColor={{ false: theme.backgroundTertiary, true: colors.primary + "50" }}
+                      thumbColor={notificationSettings.dailyMotivation ? colors.primary : theme.textTertiary}
+                      style={{ transform: [{ scale: 0.8 }] }}
+                    />
+                  </View>
+                </View>
+              </>
+            )}
 
             <View style={[styles.settingDivider, { backgroundColor: theme.cardBorder }]} />
 
@@ -1149,5 +1235,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
-  }
+  },
+  notificationSubSettings: {
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
+  notificationOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
 });

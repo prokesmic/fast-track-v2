@@ -65,6 +65,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             weightUnit: profileData.weightUnit,
             notificationsEnabled: profileData.notificationsEnabled,
             unlockedBadges: profileData.unlockedBadges,
+            fastingGoal: profileData.fastingGoal,
+            experienceLevel: profileData.experienceLevel,
+            preferredPlanId: profileData.preferredPlanId,
+            onboardingCompleted: profileData.onboardingCompleted,
           })
           .returning();
         return res.status(201).json({ profile: newProfile });
@@ -80,6 +84,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           weightUnit: profileData.weightUnit,
           notificationsEnabled: profileData.notificationsEnabled,
           unlockedBadges: profileData.unlockedBadges,
+          fastingGoal: profileData.fastingGoal,
+          experienceLevel: profileData.experienceLevel,
+          preferredPlanId: profileData.preferredPlanId,
+          onboardingCompleted: profileData.onboardingCompleted,
           updatedAt: new Date(),
         })
         .where(eq(schema.profiles.userId, userId))

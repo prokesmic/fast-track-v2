@@ -78,6 +78,10 @@ function profileToApi(profile: UserProfile): ProfileData {
     weightUnit: profile.weightUnit,
     notificationsEnabled: profile.notificationsEnabled,
     unlockedBadges: profile.unlockedBadges,
+    fastingGoal: profile.fastingGoal ?? null,
+    experienceLevel: profile.experienceLevel ?? null,
+    preferredPlanId: profile.preferredPlanId ?? null,
+    onboardingCompleted: profile.onboardingCompleted ?? false,
   };
 }
 
@@ -90,6 +94,10 @@ function apiToProfile(data: ProfileData): UserProfile {
     weightUnit: (data.weightUnit as "lbs" | "kg") ?? "lbs",
     notificationsEnabled: data.notificationsEnabled ?? false,
     unlockedBadges: data.unlockedBadges ?? [],
+    fastingGoal: data.fastingGoal ?? undefined,
+    experienceLevel: data.experienceLevel ?? undefined,
+    preferredPlanId: data.preferredPlanId ?? undefined,
+    onboardingCompleted: data.onboardingCompleted ?? false,
   };
 }
 

@@ -52,6 +52,11 @@ export const profiles = pgTable("profiles", {
   unlockedBadges: text("unlocked_badges")
     .array()
     .default(sql`'{}'::text[]`),
+  // Onboarding fields
+  fastingGoal: text("fasting_goal"), // weight_loss, health, longevity
+  experienceLevel: text("experience_level"), // beginner, intermediate, advanced
+  preferredPlanId: text("preferred_plan_id"),
+  onboardingCompleted: boolean("onboarding_completed").default(false),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
@@ -78,6 +83,58 @@ export const water = pgTable("water", {
   cups: integer("cups").default(0),
 });
 
+// Analytics events table - for tracking user behavior
+export const analyticsEvents = pgTable("analytics_events", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  eventName: text("event_name").notNull(),
+  eventData: text("event_data"), // JSON string
+  platform: text("platform"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Device tokens table - for push notifications
+export const deviceTokens = pgTable("device_tokens", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .notNull()
+    .references(() => users.id),
+  token: text("token").notNull(),
+  platform: text("platform").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Notification settings table - user preferences for notifications
+export const notificationSettings = pgTable("notification_settings", {
+  userId: varchar("user_id")
+    .primaryKey()
+    .references(() => users.id),
+  fastReminder: boolean("fast_reminder").default(true),
+  milestoneReached: boolean("milestone_reached").default(true),
+  streakAtRisk: boolean("streak_at_risk").default(true),
+  dailyMotivation: boolean("daily_motivation").default(true),
+  reminderHour: integer("reminder_hour").default(20),
+});
+
+// AI insights cache table - cache Claude AI responses
+export const aiInsightsCache = pgTable("ai_insights_cache", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .notNull()
+    .references(() => users.id),
+  insightType: text("insight_type").notNull(), // recommendation, motivation, pattern, optimization
+  content: text("content").notNull(),
+  validUntil: timestamp("valid_until").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
@@ -99,6 +156,23 @@ export const insertWeightSchema = createInsertSchema(weights).omit({
 
 export const insertWaterSchema = createInsertSchema(water);
 
+export const insertAnalyticsEventSchema = createInsertSchema(analyticsEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDeviceTokenSchema = createInsertSchema(deviceTokens).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertNotificationSettingsSchema = createInsertSchema(notificationSettings);
+
+export const insertAiInsightsCacheSchema = createInsertSchema(aiInsightsCache).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -110,3 +184,11 @@ export type Weight = typeof weights.$inferSelect;
 export type InsertWeight = z.infer<typeof insertWeightSchema>;
 export type Water = typeof water.$inferSelect;
 export type InsertWater = z.infer<typeof insertWaterSchema>;
+export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
+export type InsertAnalyticsEvent = z.infer<typeof insertAnalyticsEventSchema>;
+export type DeviceToken = typeof deviceTokens.$inferSelect;
+export type InsertDeviceToken = z.infer<typeof insertDeviceTokenSchema>;
+export type NotificationSetting = typeof notificationSettings.$inferSelect;
+export type InsertNotificationSetting = z.infer<typeof insertNotificationSettingsSchema>;
+export type AiInsightsCache = typeof aiInsightsCache.$inferSelect;
+export type InsertAiInsightsCache = z.infer<typeof insertAiInsightsCacheSchema>;

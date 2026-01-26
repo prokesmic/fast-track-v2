@@ -153,6 +153,11 @@ export interface ProfileData {
   weightUnit?: string | null;
   notificationsEnabled?: boolean | null;
   unlockedBadges?: string[] | null;
+  // Onboarding fields
+  fastingGoal?: string | null;
+  experienceLevel?: string | null;
+  preferredPlanId?: string | null;
+  onboardingCompleted?: boolean | null;
 }
 
 export async function getProfile(): Promise<ApiResponse<{ profile: ProfileData }>> {

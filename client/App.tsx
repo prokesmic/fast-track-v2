@@ -15,6 +15,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { SyncProvider } from "@/components/SyncManager";
+import { AnalyticsProvider } from "@/context/AnalyticsContext";
 
 import { useFonts } from "expo-font";
 import { Feather } from "@expo/vector-icons";
@@ -51,8 +52,9 @@ export default function App() {
       <WebFontFix />
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <SyncProvider>
-            <ThemeProvider>
+          <AnalyticsProvider>
+            <SyncProvider>
+              <ThemeProvider>
               <SafeAreaProvider>
                 <GestureHandlerRootView style={styles.root}>
                   <KeyboardProvider>
@@ -64,7 +66,8 @@ export default function App() {
                 </GestureHandlerRootView>
               </SafeAreaProvider>
             </ThemeProvider>
-          </SyncProvider>
+            </SyncProvider>
+          </AnalyticsProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>

@@ -24,6 +24,7 @@ import { getStageForDuration } from "@/constants/fastingStages";
 import { DailyInsight } from "@/components/DailyInsight";
 import { MotivationCard } from "@/components/MotivationCard";
 import { RecommendationCard } from "@/components/RecommendationCard";
+import { AIInsightCard, PersonalizedRecommendation } from "@/components/ai";
 import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import { FAB } from "@/components/FAB";
 import { GlassCard } from "@/components/GlassCard";
@@ -571,7 +572,18 @@ export default function HomeScreen() {
                   />
                 </View>
 
-                <DailyInsight />
+                {/* AI-Powered Daily Insight */}
+                <AIInsightCard type="motivation" title="Daily Motivation" />
+
+                {/* AI-Powered Recommendation (show when not fasting) */}
+                {!activeFast && (
+                  <PersonalizedRecommendation
+                    onStartFast={(planId) => {
+                      // Navigate to start fast with the recommended plan
+                      navigation.navigate("StartFast", { isCustom: false });
+                    }}
+                  />
+                )}
               </>
             )}
         </ScrollView>
