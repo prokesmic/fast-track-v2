@@ -56,10 +56,10 @@ function formatTime(ms: number): { hours: string; minutes: string; seconds: stri
 
 function formatTargetTime(startTime: number, targetDuration: number): string {
   const endTime = new Date(startTime + targetDuration * 60 * 60 * 1000);
-  return endTime.toLocaleTimeString("en-US", {
-    hour: "numeric",
+  return endTime.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
     minute: "2-digit",
-    hour12: true,
+    hour12: false,
   });
 }
 
@@ -492,10 +492,10 @@ export default function HomeScreen() {
                         <Pressable onPress={() => setDatePickerVisible(true)}>
                           <View>
                             <ThemedText type="h4" style={{ textDecorationLine: "underline" }}>
-                              {new Date(activeFast.startTime).toLocaleTimeString("en-US", {
-                                hour: "numeric",
+                              {new Date(activeFast.startTime).toLocaleTimeString("en-GB", {
+                                hour: "2-digit",
                                 minute: "2-digit",
-                                hour12: true,
+                                hour12: false,
                               })}
                             </ThemedText>
                             <ThemedText type="caption" style={{ color: theme.textSecondary }}>

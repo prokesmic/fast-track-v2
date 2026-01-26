@@ -593,10 +593,10 @@ export default function StartFastModal() {
               </ThemedText>
               <Pressable onPress={() => setDatePickerVisible(true)}>
                 <ThemedText type="h3" style={{ color: colors.primary, textDecorationLine: "underline" }}>
-                  {startTime.toLocaleTimeString("en-US", {
-                    hour: "numeric",
+                  {startTime.toLocaleTimeString("en-GB", {
+                    hour: "2-digit",
                     minute: "2-digit",
-                    hour12: true,
+                    hour12: false,
                   })}
                 </ThemedText>
               </Pressable>
@@ -621,10 +621,10 @@ export default function StartFastModal() {
                 Goal
               </ThemedText>
               <ThemedText type="h3">
-                {endTime.toLocaleTimeString("en-US", {
-                  hour: "numeric",
+                {endTime.toLocaleTimeString("en-GB", {
+                  hour: "2-digit",
                   minute: "2-digit",
-                  hour12: true,
+                  hour12: false,
                 })}
               </ThemedText>
               <ThemedText type="small" style={{ color: theme.textSecondary }}>

@@ -54,7 +54,7 @@ function generateDays(year: number, month: number): number[] {
 }
 
 function generateHours(): number[] {
-    return Array.from({ length: 12 }, (_, i) => i + 1);
+    return Array.from({ length: 24 }, (_, i) => i);
 }
 
 function generateMinutes(): number[] {
@@ -184,9 +184,8 @@ export function CustomDateTimePicker({
     const [selectedMonth, setSelectedMonth] = useState(date.getMonth());
     const [selectedDay, setSelectedDay] = useState(date.getDate());
     const [selectedYear, setSelectedYear] = useState(date.getFullYear());
-    const [selectedHour, setSelectedHour] = useState(date.getHours() % 12 || 12);
+    const [selectedHour, setSelectedHour] = useState(date.getHours());
     const [selectedMinute, setSelectedMinute] = useState(date.getMinutes());
-    const [selectedAmPm, setSelectedAmPm] = useState(date.getHours() >= 12 ? 1 : 0);
 
     const years = generateYears();
     const days = generateDays(selectedYear, selectedMonth);
@@ -198,9 +197,8 @@ export function CustomDateTimePicker({
             setSelectedMonth(date.getMonth());
             setSelectedDay(date.getDate());
             setSelectedYear(date.getFullYear());
-            setSelectedHour(date.getHours() % 12 || 12);
+            setSelectedHour(date.getHours());
             setSelectedMinute(date.getMinutes());
-            setSelectedAmPm(date.getHours() >= 12 ? 1 : 0);
         }
     }, [isVisible, date]);
 
@@ -213,36 +211,22 @@ export function CustomDateTimePicker({
     }, [selectedMonth, selectedYear]);
 
     const handleConfirm = () => {
-        let hour24 = selectedHour;
-        if (selectedAmPm === 1 && selectedHour !== 12) {
-            hour24 = selectedHour + 12;
-        } else if (selectedAmPm === 0 && selectedHour === 12) {
-            hour24 = 0;
-        }
-
         const newDate = new Date(
             selectedYear,
             selectedMonth,
             selectedDay,
-            hour24,
+            selectedHour,
             selectedMinute
         );
         onConfirm(newDate);
     };
 
     const formatPreview = () => {
-        let hour24 = selectedHour;
-        if (selectedAmPm === 1 && selectedHour !== 12) {
-            hour24 = selectedHour + 12;
-        } else if (selectedAmPm === 0 && selectedHour === 12) {
-            hour24 = 0;
-        }
-
         const previewDate = new Date(
             selectedYear,
             selectedMonth,
             selectedDay,
-            hour24,
+            selectedHour,
             selectedMinute
         );
 
@@ -256,18 +240,18 @@ export function CustomDateTimePicker({
         }
         if (mode === "time") {
             return previewDate.toLocaleTimeString([], {
-                hour: "numeric",
+                hour: "2-digit",
                 minute: "2-digit",
-                hour12: true,
+                hour12: false,
             });
         }
         return previewDate.toLocaleString([], {
             weekday: "short",
             month: "short",
             day: "numeric",
-            hour: "numeric",
+            hour: "2-digit",
             minute: "2-digit",
-            hour12: true,
+            hour12: false,
         });
     };
 
@@ -337,9 +321,10 @@ export function CustomDateTimePicker({
                             <View style={styles.pickersRow}>
                                 <WheelPicker
                                     items={hours}
-                                    selectedIndex={selectedHour - 1}
-                                    onSelect={(index) => setSelectedHour(index + 1)}
+                                    selectedIndex={selectedHour}
+                                    onSelect={setSelectedHour}
                                     width={50}
+                                    formatItem={(item) => String(item).padStart(2, "0")}
                                 />
                                 <ThemedText type="h3" style={{ color: theme.textSecondary }}>:</ThemedText>
                                 <WheelPicker
@@ -348,12 +333,6 @@ export function CustomDateTimePicker({
                                     onSelect={setSelectedMinute}
                                     width={50}
                                     formatItem={(item) => String(item).padStart(2, "0")}
-                                />
-                                <WheelPicker
-                                    items={["AM", "PM"]}
-                                    selectedIndex={selectedAmPm}
-                                    onSelect={setSelectedAmPm}
-                                    width={60}
                                 />
                             </View>
                         </View>

@@ -82,7 +82,7 @@ export function HistoryItem({ fast, onEdit, onDelete }: HistoryItemProps) {
                 <View style={styles.detailItem}>
                     <ThemedText type="caption" style={{ color: theme.textSecondary }}>Started</ThemedText>
                     <ThemedText type="small">
-                        {startTime.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                        {startTime.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })}
                     </ThemedText>
                 </View>
                 <View style={styles.arrow}>
@@ -91,7 +91,7 @@ export function HistoryItem({ fast, onEdit, onDelete }: HistoryItemProps) {
                 <View style={styles.detailItem}>
                     <ThemedText type="caption" style={{ color: theme.textSecondary }}>Ended</ThemedText>
                     <ThemedText type="small">
-                        {endTime ? endTime.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : "Ongoing"}
+                        {endTime ? endTime.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }) : "Ongoing"}
                     </ThemedText>
                 </View>
             </View>
