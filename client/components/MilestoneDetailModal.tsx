@@ -93,8 +93,9 @@ export function MilestoneDetailModal({
                         <Pressable
                             onPress={onClose}
                             style={[styles.closeButton, { backgroundColor: theme.backgroundTertiary }]}
+                            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
                         >
-                            <Feather name="x" size={20} color={theme.textSecondary} />
+                            <Feather name="x" size={24} color={theme.text} />
                         </Pressable>
                     </View>
 
@@ -287,11 +288,12 @@ const styles = StyleSheet.create({
         position: "absolute",
         right: Spacing.lg,
         top: Spacing.md,
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
         alignItems: "center",
         justifyContent: "center",
+        zIndex: 10,
     },
     content: {
         padding: Spacing.xl,

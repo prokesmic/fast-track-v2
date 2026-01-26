@@ -35,7 +35,7 @@ export default function RootStackNavigator() {
   const screenOptions = useScreenOptions();
 
   return (
-    <Stack.Navigator screenOptions={screenOptions} initialRouteName="Login">
+    <Stack.Navigator screenOptions={screenOptions} initialRouteName="Main">
       <Stack.Screen
         name="Login"
         component={LoginScreen}

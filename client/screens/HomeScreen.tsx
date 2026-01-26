@@ -34,6 +34,7 @@ import { Spacing, Colors, BorderRadius, Shadows } from "@/constants/theme";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { CustomDateTimePicker } from "@/components/DateTimePicker";
 import { MilestoneDetailModal } from "@/components/MilestoneDetailModal";
+import { AdjustDurationModal } from "@/components/AdjustDurationModal";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -181,11 +182,20 @@ export default function HomeScreen() {
   const glowAnim = useSharedValue(0.5);
   const [isDatePickerVisible, setDatePickerVisible] = useState(false);
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
+  const [isAdjustDurationVisible, setAdjustDurationVisible] = useState(false);
 
   const handleUpdateStartTime = useCallback(async (date: Date) => {
     setDatePickerVisible(false);
     if (activeFast) {
       await updateFast(activeFast.id, { startTime: date.getTime() });
+    }
+  }, [activeFast, updateFast]);
+
+  const handleUpdateDuration = useCallback(async (newDuration: number) => {
+    setAdjustDurationVisible(false);
+    if (activeFast) {
+      await updateFast(activeFast.id, { targetDuration: newDuration });
+      safeHaptics.notificationAsync();
     }
   }, [activeFast, updateFast]);
 
@@ -503,14 +513,19 @@ export default function HomeScreen() {
                       <View style={[styles.infoIconBg, { backgroundColor: colors.primary + "15" }]}>
                         <Feather name="flag" size={20} color={colors.primary} />
                       </View>
-                      <View>
-                        <ThemedText type="caption" style={{ color: theme.textSecondary }}>
-                          Goal
-                        </ThemedText>
-                        <ThemedText type="h4">
-                          {formatTargetTime(activeFast.startTime, activeFast.targetDuration)}
-                        </ThemedText>
-                      </View>
+                      <Pressable onPress={() => setAdjustDurationVisible(true)}>
+                        <View>
+                          <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                            Goal
+                          </ThemedText>
+                          <ThemedText type="h4" style={{ textDecorationLine: "underline" }}>
+                            {activeFast.targetDuration}h
+                          </ThemedText>
+                          <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                            {formatTargetTime(activeFast.startTime, activeFast.targetDuration)}
+                          </ThemedText>
+                        </View>
+                      </Pressable>
                     </View>
                   </View>
                 </GlassCard>
@@ -587,6 +602,13 @@ export default function HomeScreen() {
           setSelectedMilestone(null);
           navigation.navigate("FastingStages", { hoursElapsed: hours });
         }}
+      />
+      <AdjustDurationModal
+        isVisible={isAdjustDurationVisible}
+        currentDuration={activeFast?.targetDuration || 16}
+        elapsedHours={elapsedHours}
+        onConfirm={handleUpdateDuration}
+        onCancel={() => setAdjustDurationVisible(false)}
       />
     </View >
   );
