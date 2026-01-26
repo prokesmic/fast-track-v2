@@ -66,6 +66,12 @@ export function useFasting() {
 
       await setActiveFast(fast);
       setActiveFastState(fast);
+
+      // Sync to cloud when fast is started
+      syncFastToCloud(fast).catch(() => {
+        // Silently fail - will sync on next full sync
+      });
+
       return fast;
     },
     []

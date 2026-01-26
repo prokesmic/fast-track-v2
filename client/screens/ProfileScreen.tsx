@@ -17,6 +17,7 @@ import * as Updates from "expo-updates";
 import { safeHaptics, showAlert, showConfirm } from "@/lib/platform";
 import { useAuth } from "@/context/AuthContext";
 import { performFullSync, getLastSyncTime } from "@/lib/sync";
+import { useSync } from "@/components/SyncManager";
 
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { ThemedText } from "@/components/ThemedText";
@@ -129,6 +130,7 @@ export default function ProfileScreen() {
   const colors = Colors[colorScheme];
   const { stats, refresh, fasts, activeFast, cancelFast, deleteFast, updateFast } = useFasting();
   const { user, isAuthenticated, logout } = useAuth();
+  const { syncStatus, lastSyncTime: globalLastSyncTime, syncNow } = useSync();
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
@@ -175,11 +177,18 @@ export default function ProfileScreen() {
       safeHaptics.notificationAsync();
       await loadData();
       refresh();
-      showAlert("Sync Complete", "Your data has been synced successfully.");
+      showAlert("Sync Complete", "Your data has been backed up to the cloud.");
     } else {
       showAlert("Sync Failed", result.error || "Could not sync data. Please try again.");
     }
   };
+
+  // Update local lastSyncTime from global state
+  useEffect(() => {
+    if (globalLastSyncTime) {
+      setLastSyncTime(globalLastSyncTime);
+    }
+  }, [globalLastSyncTime]);
 
   const handleLogout = async () => {
     const confirmed = await showConfirm(

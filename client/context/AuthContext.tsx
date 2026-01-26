@@ -21,6 +21,7 @@ import {
   register as apiRegister,
   getMe,
 } from "../lib/api";
+import { performFullSync } from "../lib/sync";
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -71,6 +72,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
           setUser(authUser);
           await setStoredUser(authUser);
+
+          // Auto-sync data on app startup when authenticated
+          performFullSync().catch((err) => {
+            console.log("Background sync on startup:", err);
+          });
         } else {
           // Token is invalid, clear it
           await clearToken();
@@ -124,6 +130,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await clearRememberedCredentials();
           }
 
+          // Sync local data to cloud after login
+          performFullSync().catch((err) => {
+            console.log("Background sync after login:", err);
+          });
+
           return { success: true };
         }
 
@@ -156,6 +167,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const authUser: AuthUser = { id: userData.id, email: userData.email };
           await setStoredUser(authUser);
           setUser(authUser);
+
+          // Sync local data to cloud after registration
+          performFullSync().catch((err) => {
+            console.log("Background sync after registration:", err);
+          });
 
           return { success: true };
         }
