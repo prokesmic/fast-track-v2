@@ -4,69 +4,61 @@ This guide explains how to set up Development, Staging (QA), and Production envi
 
 ## Overview
 
-| Environment | Branch | Purpose | Domain |
-|-------------|--------|---------|--------|
-| **Development** | `develop` | Feature development, testing | `*-git-develop-*.vercel.app` |
-| **Staging/QA** | `staging` | Pre-production testing | `*-git-staging-*.vercel.app` |
-| **Production** | `main` | Live users | `fast-track-v2.vercel.app` |
+| Environment | Branch | Database | Purpose |
+|-------------|--------|----------|---------|
+| **Development** | `develop` | Dev database | Feature development, testing |
+| **Staging/QA** | `staging` | Production database | Pre-production testing with real data |
+| **Production** | `main` | Production database | Live users |
 
-## Step 1: Create Database Branches in Neon
+## Step 1: Create Development Database in Neon
 
 1. Go to [Neon Console](https://console.neon.tech)
 2. Open your project: `hidden-cake-82302964`
-3. Create two new branches:
+3. Create ONE new branch for development:
 
 ### Create Development Branch
 - Click **Branches** → **Create Branch**
 - Name: `development`
 - Parent: `main`
-- This creates an isolated copy of your production database
+- This creates an isolated copy for testing
 
-### Create Staging Branch
-- Click **Branches** → **Create Branch**
-- Name: `staging`
-- Parent: `main`
-- This creates another isolated copy for QA testing
-
-4. For each branch, copy the connection string:
-   - Click on the branch
+4. Copy the connection string:
+   - Click on the new `development` branch
    - Go to **Connection Details**
-   - Copy the **Connection string** (with pooling)
+   - Copy the **Connection string** (pooled version ending in `-pooler`)
 
 ## Step 2: Configure Vercel Environment Variables
 
 1. Go to [Vercel Dashboard](https://vercel.com) → Project: `fast-track-v2`
 2. Navigate to **Settings** → **Environment Variables**
 
-### Add Environment-Specific Variables
+### Current Variables (keep as-is for Production)
 
-For each variable, you'll set different values per environment:
+Your existing `DATABASE_URL` and other variables are already set for Production. Don't change them.
 
-#### DATABASE_URL / POSTGRES_URL
+### Add Development Database Override
 
-| Environment | Value |
-|-------------|-------|
-| Production | `postgresql://...@ep-wild-union-agsda7da-pooler...` (current) |
-| Preview | `postgresql://...@ep-xxx-development-pooler...` (dev branch) |
-| Development | `postgresql://...@ep-xxx-development-pooler...` (dev branch) |
+1. Find `DATABASE_URL` (or `POSTGRES_URL`) in the list
+2. Click on it to expand
+3. Click **Add Override** or look for branch-specific settings
+4. Add a **Preview** override for branch `develop`:
+   - Branch: `develop`
+   - Value: `postgresql://...` (your NEW development branch connection string from Neon)
 
-#### EXPO_PUBLIC_APP_ENV
+### Add Environment Indicator Variable
+
+Add a new variable `EXPO_PUBLIC_APP_ENV`:
 
 | Environment | Value |
 |-------------|-------|
 | Production | `production` |
-| Preview | (leave empty - will be set by branch) |
+| Preview | `staging` |
 | Development | `development` |
 
-### Branch-Specific Preview Settings
-
-To give staging its own database:
-
-1. In Vercel, go to **Settings** → **Environment Variables**
-2. Click on your `DATABASE_URL` variable
-3. Under **Preview**, click **Add Branch Override**
-4. Add branch: `staging` with the staging database URL
-5. Add branch: `develop` with the development database URL
+Or add branch overrides:
+- Branch `develop` → `development`
+- Branch `staging` → `staging`
+- Default Preview → `staging`
 
 ## Step 3: Configure Branch Deployments
 
@@ -178,6 +170,9 @@ The footer in Profile screen also shows the environment name.
 ### Migrations
 When you need to run migrations:
 ```bash
-# For each environment's database
-DATABASE_URL="<env-specific-url>" npm run db:push
+# Development database
+DATABASE_URL="<dev-branch-url>" npm run db:push
+
+# Production database (also used by staging)
+DATABASE_URL="<prod-url>" npm run db:push
 ```
