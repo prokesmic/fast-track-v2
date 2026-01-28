@@ -25,6 +25,7 @@ import { DailyInsight } from "@/components/DailyInsight";
 import { MotivationCard } from "@/components/MotivationCard";
 import { RecommendationCard } from "@/components/RecommendationCard";
 import { AIInsightCard, PersonalizedRecommendation } from "@/components/ai";
+import { HealthSummaryCard } from "@/components/health";
 import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import { FAB } from "@/components/FAB";
 import { GlassCard } from "@/components/GlassCard";
@@ -574,6 +575,9 @@ export default function HomeScreen() {
 
                 {/* AI-Powered Daily Insight */}
                 <AIInsightCard type="motivation" title="Daily Motivation" />
+
+                {/* Health Data Summary */}
+                <HealthSummaryCard />
 
                 {/* AI-Powered Recommendation (show when not fasting) */}
                 {!activeFast && (
