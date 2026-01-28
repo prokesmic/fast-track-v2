@@ -35,6 +35,7 @@ import { HistoryItem } from "@/components/HistoryItem";
 import { FastEditModal } from "@/components/FastEditModal";
 import { Fast } from "@/lib/storage";
 import { ENV, currentEnvConfig, isProduction } from "@/lib/environment";
+import { APP_VERSION, formatDeploymentDate, DEPLOYMENT_DATE } from "@/lib/appInfo";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -1004,13 +1005,28 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.footer}>
-          <ThemedText type="caption" style={{ color: theme.textTertiary }}>
-            FastTrack v1.1
-          </ThemedText>
+          <View style={[styles.versionCard, { backgroundColor: theme.cardBackground }]}>
+            <View style={styles.versionRow}>
+              <Feather name="package" size={14} color={colors.primary} />
+              <ThemedText type="caption" style={{ color: theme.text, fontWeight: '600' }}>
+                FastTrack v{APP_VERSION}
+              </ThemedText>
+            </View>
+            <View style={styles.versionDivider} />
+            <View style={styles.versionRow}>
+              <Feather name="calendar" size={14} color={theme.textSecondary} />
+              <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                Deployed {formatDeploymentDate(DEPLOYMENT_DATE)}
+              </ThemedText>
+            </View>
+          </View>
           {!isProduction && (
-            <ThemedText type="caption" style={{ color: currentEnvConfig.color, marginTop: 4 }}>
-              {currentEnvConfig.name} Environment
-            </ThemedText>
+            <View style={[styles.envBadge, { backgroundColor: currentEnvConfig.color + "20" }]}>
+              <View style={[styles.envDot, { backgroundColor: currentEnvConfig.color }]} />
+              <ThemedText type="caption" style={{ color: currentEnvConfig.color, fontWeight: '600' }}>
+                {currentEnvConfig.name}
+              </ThemedText>
+            </View>
           )}
         </View>
       </KeyboardAwareScrollViewCompat >
@@ -1252,6 +1268,38 @@ const styles = StyleSheet.create({
   footer: {
     alignItems: "center",
     paddingVertical: Spacing.xl,
+    gap: Spacing.md,
+  },
+  versionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    gap: Spacing.md,
+  },
+  versionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  versionDivider: {
+    width: 1,
+    height: 14,
+    backgroundColor: 'rgba(128, 128, 128, 0.3)',
+  },
+  envBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    gap: Spacing.xs,
+  },
+  envDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   achievementsRow: {
     flexDirection: 'row',
