@@ -26,9 +26,12 @@ import { Fast, deleteFast } from "@/lib/storage";
 import { FastEditModal } from "@/components/FastEditModal";
 import { HistoryChart } from "@/components/history/HistoryChart";
 import { FastList } from "@/components/history/FastList";
+import CalendarView from "@/components/calendar/CalendarView";
+import MonthlyStatsCard from "@/components/calendar/MonthlyStatsCard";
+import { useCalendar } from "@/hooks/useCalendar";
 
 type FilterType = "week" | "month" | "all";
-type ViewType = "overview" | "fasts" | "insights";
+type ViewType = "overview" | "calendar" | "fasts" | "insights";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -83,6 +86,7 @@ export default function HistoryScreen() {
   const { theme, colorScheme } = useTheme();
   const colors = Colors[colorScheme];
   const { fasts, stats, refresh, updateFast } = useFasting();
+  const calendar = useCalendar(fasts);
   const [filter, setFilter] = useState<FilterType>("month");
   const [viewType, setViewType] = useState<ViewType>("overview");
   const [selectedMonth, setSelectedMonth] = useState(new Date());
@@ -316,6 +320,13 @@ export default function HistoryScreen() {
               colors={colors}
             />
             <TabButton
+              label="Calendar"
+              icon="calendar"
+              isActive={viewType === "calendar"}
+              onPress={() => handleViewChange("calendar")}
+              colors={colors}
+            />
+            <TabButton
               label="Fasts"
               icon="list"
               isActive={viewType === "fasts"}
@@ -421,6 +432,40 @@ export default function HistoryScreen() {
                 />
               </GlassCard>
             </>
+          </ScrollView>
+        )}
+
+        {viewType === "calendar" && (
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={[
+              styles.scrollContent,
+              {
+                paddingTop: Spacing.md,
+                paddingBottom: tabBarHeight + Spacing.xl,
+              },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
+            <CalendarView
+              year={calendar.currentMonth.year}
+              month={calendar.currentMonth.month}
+              calendarData={calendar.calendarData}
+              streakDays={calendar.streakDays}
+              monthTitle={calendar.monthTitle}
+              onPrevMonth={calendar.goToPreviousMonth}
+              onNextMonth={calendar.goToNextMonth}
+              onToday={calendar.goToToday}
+              isCurrentMonth={calendar.isCurrentMonth}
+              onDayPress={(day) => {
+                safeHaptics.selectionAsync();
+                // Could show day details modal here
+              }}
+            />
+            <MonthlyStatsCard
+              stats={calendar.monthlyStats}
+              monthTitle={calendar.monthTitle}
+            />
           </ScrollView>
         )}
 

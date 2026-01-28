@@ -13,7 +13,8 @@
       "bundleIdentifier": "com.fasttrack.app",
       "entitlements": {
         "com.apple.developer.healthkit": true,
-        "com.apple.developer.healthkit.background-delivery": true
+        "com.apple.developer.healthkit.background-delivery": true,
+        "com.apple.security.application-groups": ["group.com.fasttrack.app"]
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,

@@ -8,11 +8,13 @@ import PlansScreen from "@/screens/PlansScreen";
 import HistoryScreen from "@/screens/HistoryScreen";
 import ProfileScreen from "@/screens/ProfileScreen";
 import SocialScreen from "@/screens/SocialScreen";
+import LearnScreen from "@/screens/LearnScreen";
 import { useTheme } from "@/hooks/useTheme";
 export type MainTabParamList = {
   HomeTab: undefined;
   PlansTab: undefined;
   HistoryTab: undefined;
+  LearnTab: undefined;
   SocialTab: undefined;
   ProfileTab: undefined;
 };
@@ -83,6 +85,17 @@ export default function MainTabNavigator() {
           headerTransparent: false,
           tabBarIcon: ({ color, size }) => (
             <Feather name="calendar" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="LearnTab"
+        component={LearnScreen}
+        options={{
+          headerTitle: "Learn",
+          headerTransparent: true,
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="book-open" size={size} color={color} />
           ),
         }}
       />

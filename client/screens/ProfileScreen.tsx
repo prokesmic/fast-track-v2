@@ -128,6 +128,7 @@ type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   Main: undefined;
+  ProgressPhotos: undefined;
 };
 
 export default function ProfileScreen() {
@@ -566,6 +567,25 @@ export default function ProfileScreen() {
             </View>
           </GlassCard>
         </View>
+
+        {/* Progress Photos Card */}
+        <Pressable
+          onPress={() => navigation.navigate("ProgressPhotos")}
+          style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+        >
+          <GlassCard style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
+            <View style={[styles.settingIcon, { backgroundColor: colors.accent + "15" }]}>
+              <Feather name="camera" size={20} color={colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText type="bodyMedium">Progress Photos</ThemedText>
+              <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                Track your visual transformation
+              </ThemedText>
+            </View>
+            <Feather name="chevron-right" size={20} color={theme.textSecondary} />
+          </GlassCard>
+        </Pressable>
 
         <View style={styles.sectionHeaderInline}>
           <View style={[styles.sectionIconSmall, { backgroundColor: colors.primary + "18" }]}>

@@ -9,6 +9,7 @@ import RegisterScreen from "@/screens/RegisterScreen";
 import OnboardingScreen from "@/screens/OnboardingScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 import BadgesScreen from "@/screens/BadgesScreen";
+import ProgressPhotosScreen from "@/screens/ProgressPhotosScreen";
 import { getFasts, getProfile } from "@/lib/storage";
 
 export type FastingPlan = {
@@ -30,6 +31,7 @@ export type RootStackParamList = {
   PlanDetail: { plan: FastingPlan };
   FastingStages: { hoursElapsed?: number };
   Badges: undefined;
+  ProgressPhotos: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -110,6 +112,15 @@ export default function RootStackNavigator() {
         component={BadgesScreen}
         options={{
           headerTitle: "All Badges",
+          headerTransparent: true,
+          headerBlurEffect: "regular",
+        }}
+      />
+      <Stack.Screen
+        name="ProgressPhotos"
+        component={ProgressPhotosScreen}
+        options={{
+          headerTitle: "Progress Photos",
           headerTransparent: true,
           headerBlurEffect: "regular",
         }}
