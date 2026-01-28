@@ -7,11 +7,13 @@ import HomeScreen from "@/screens/HomeScreen";
 import PlansScreen from "@/screens/PlansScreen";
 import HistoryScreen from "@/screens/HistoryScreen";
 import ProfileScreen from "@/screens/ProfileScreen";
+import SocialScreen from "@/screens/SocialScreen";
 import { useTheme } from "@/hooks/useTheme";
 export type MainTabParamList = {
   HomeTab: undefined;
   PlansTab: undefined;
   HistoryTab: undefined;
+  SocialTab: undefined;
   ProfileTab: undefined;
 };
 
@@ -81,6 +83,17 @@ export default function MainTabNavigator() {
           headerTransparent: false,
           tabBarIcon: ({ color, size }) => (
             <Feather name="calendar" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="SocialTab"
+        component={SocialScreen}
+        options={{
+          headerTitle: "Community",
+          headerTransparent: true,
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="users" size={size} color={color} />
           ),
         }}
       />
