@@ -21,6 +21,7 @@ import { useFonts } from "expo-font";
 import { Feather } from "@expo/vector-icons";
 
 import { WebFontFix } from "@/components/WebFontFix";
+import { EnvironmentBadge } from "@/components/EnvironmentBadge";
 
 // Prevent auto-hiding the splash screen until we're ready
 SplashScreen.preventAutoHideAsync().catch(() => { });
@@ -62,6 +63,7 @@ export default function App() {
                       <RootStackNavigator />
                     </NavigationContainer>
                     <StatusBar style="auto" />
+                    <EnvironmentBadge />
                   </KeyboardProvider>
                 </GestureHandlerRootView>
               </SafeAreaProvider>

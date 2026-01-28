@@ -34,6 +34,7 @@ import { WeightSection } from "@/components/profile/WeightSection";
 import { HistoryItem } from "@/components/HistoryItem";
 import { FastEditModal } from "@/components/FastEditModal";
 import { Fast } from "@/lib/storage";
+import { ENV, currentEnvConfig, isProduction } from "@/lib/environment";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -986,6 +987,11 @@ export default function ProfileScreen() {
           <ThemedText type="caption" style={{ color: theme.textTertiary }}>
             FastTrack v1.1
           </ThemedText>
+          {!isProduction && (
+            <ThemedText type="caption" style={{ color: currentEnvConfig.color, marginTop: 4 }}>
+              {currentEnvConfig.name} Environment
+            </ThemedText>
+          )}
         </View>
       </KeyboardAwareScrollViewCompat >
 
