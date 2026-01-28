@@ -201,7 +201,10 @@ export function useFasting() {
   const currentStreak = calculateStreak(fasts);
   const longestStreak = calculateLongestStreak(fasts);
   const totalHours = calculateTotalHours(fasts);
-  const totalFasts = fasts.filter((f) => f.completed).length;
+  // Count all fasts that have ended (regardless of reaching target)
+  const totalFasts = fasts.filter((f) => f.endTime).length;
+  // Count fasts that reached their target duration
+  const targetReached = fasts.filter((f) => f.completed).length;
 
 
   const updateFast = useCallback(async (id: string, updates: Partial<Fast>) => {
@@ -261,6 +264,7 @@ export function useFasting() {
       longestStreak,
       totalHours,
       totalFasts,
+      targetReached,
     },
   };
 }

@@ -51,9 +51,11 @@ interface StatBoxProps {
   value: string;
   label: string;
   color: string;
+  subtitle?: string;
+  subtitleColor?: string;
 }
 
-function StatBox({ icon, value, label, color }: StatBoxProps) {
+function StatBox({ icon, value, label, color, subtitle, subtitleColor }: StatBoxProps) {
   const { theme } = useTheme();
   const scale = useSharedValue(1);
 
@@ -109,6 +111,11 @@ function StatBox({ icon, value, label, color }: StatBoxProps) {
                 );
               })}
             </View>
+            {subtitle && (
+              <ThemedText type="caption" style={{ color: subtitleColor || theme.textSecondary, marginTop: 2, fontWeight: "500" }}>
+                {subtitle}
+              </ThemedText>
+            )}
           </View>
         </View>
       </GlassCard>
@@ -159,9 +166,9 @@ export default function ProfileScreen() {
   const [editingFast, setEditingFast] = useState<Fast | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 
-  // Get completed fasts sorted by date (newest first)
-  const completedFasts = fasts.filter(f => f.completed && f.endTime).sort((a, b) => b.endTime! - a.endTime!);
-  const recentFasts = completedFasts.slice(0, 5); // Show top 5
+  // Get all ended fasts sorted by date (newest first)
+  const endedFasts = fasts.filter(f => f.endTime).sort((a, b) => b.endTime! - a.endTime!);
+  const recentFasts = endedFasts.slice(0, 5); // Show top 5
 
   const loadData = useCallback(async () => {
     const [profileData, weightsData, syncTime] = await Promise.all([
@@ -498,6 +505,8 @@ export default function ProfileScreen() {
               value={`${stats.totalFasts}`}
               label="Fasts Done"
               color={colors.success}
+              subtitle={stats.totalFasts > 0 ? `${stats.targetReached} reached target` : undefined}
+              subtitleColor={colors.primary}
             />
           </View>
           <View style={styles.statsGrid}>
