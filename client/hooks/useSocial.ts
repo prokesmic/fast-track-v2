@@ -88,7 +88,7 @@ export function useFriends() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/social/friends`, {
+      const response = await fetch(`${API_BASE}/api/social?route=friends`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -113,7 +113,7 @@ export function useFriends() {
       if (!token) return { success: false, error: "Not authenticated" };
 
       try {
-        const response = await fetch(`${API_BASE}/api/social/friends`, {
+        const response = await fetch(`${API_BASE}/api/social?route=friends`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -142,7 +142,7 @@ export function useFriends() {
       if (!token) return { success: false };
 
       try {
-        const response = await fetch(`${API_BASE}/api/social/friends`, {
+        const response = await fetch(`${API_BASE}/api/social?route=friends`, {
           method: "PATCH",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -167,7 +167,7 @@ export function useFriends() {
       if (!token) return { success: false };
 
       try {
-        const response = await fetch(`${API_BASE}/api/social/friends`, {
+        const response = await fetch(`${API_BASE}/api/social?route=friends`, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -213,7 +213,7 @@ export function useChallenges(type: "mine" | "public" | "active" = "active") {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `${API_BASE}/api/social/challenges?type=${type}`,
+        `${API_BASE}/api/social?route=challenges?type=${type}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -248,7 +248,7 @@ export function useChallenges(type: "mine" | "public" | "active" = "active") {
       if (!token) return { success: false, error: "Not authenticated" };
 
       try {
-        const response = await fetch(`${API_BASE}/api/social/challenges`, {
+        const response = await fetch(`${API_BASE}/api/social?route=challenges`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -277,7 +277,7 @@ export function useChallenges(type: "mine" | "public" | "active" = "active") {
       if (!token) return { success: false };
 
       try {
-        const response = await fetch(`${API_BASE}/api/social/challenges`, {
+        const response = await fetch(`${API_BASE}/api/social?route=challenges`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -305,7 +305,7 @@ export function useChallenges(type: "mine" | "public" | "active" = "active") {
       if (!token) return { success: false };
 
       try {
-        const response = await fetch(`${API_BASE}/api/social/challenges`, {
+        const response = await fetch(`${API_BASE}/api/social?route=challenges`, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -356,7 +356,7 @@ export function useLeaderboard(
       if (challengeId) params.append("challengeId", challengeId);
 
       const response = await fetch(
-        `${API_BASE}/api/social/leaderboard?${params}`,
+        `${API_BASE}/api/social?route=leaderboard?${params}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -397,7 +397,7 @@ export function useFeed(type: "all" | "public" | "mine" = "all") {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/social/feed?type=${type}`, {
+      const response = await fetch(`${API_BASE}/api/social?route=feed?type=${type}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -426,7 +426,7 @@ export function useFeed(type: "all" | "public" | "mine" = "all") {
       if (!token) return { success: false };
 
       try {
-        const response = await fetch(`${API_BASE}/api/social/feed`, {
+        const response = await fetch(`${API_BASE}/api/social?route=feed`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -460,7 +460,7 @@ export function useFeed(type: "all" | "public" | "mine" = "all") {
       );
 
       try {
-        await fetch(`${API_BASE}/api/social/feed`, {
+        await fetch(`${API_BASE}/api/social?route=feed`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -496,7 +496,7 @@ export function useFeed(type: "all" | "public" | "mine" = "all") {
       );
 
       try {
-        await fetch(`${API_BASE}/api/social/feed`, {
+        await fetch(`${API_BASE}/api/social?route=feed`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -523,7 +523,7 @@ export function useFeed(type: "all" | "public" | "mine" = "all") {
       if (!token) return { success: false };
 
       try {
-        const response = await fetch(`${API_BASE}/api/social/feed`, {
+        const response = await fetch(`${API_BASE}/api/social?route=feed`, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -565,7 +565,7 @@ export function useSocialProfile() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/social/profile`, {
+      const response = await fetch(`${API_BASE}/api/social?route=profile`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -589,7 +589,7 @@ export function useSocialProfile() {
       if (!token) return { success: false, error: "Not authenticated" };
 
       try {
-        const response = await fetch(`${API_BASE}/api/social/profile`, {
+        const response = await fetch(`${API_BASE}/api/social?route=profile`, {
           method: "PUT",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -619,7 +619,7 @@ export function useSocialProfile() {
 
       try {
         const response = await fetch(
-          `${API_BASE}/api/social/profile?search=${encodeURIComponent(query)}`,
+          `${API_BASE}/api/social?route=profile?search=${encodeURIComponent(query)}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }

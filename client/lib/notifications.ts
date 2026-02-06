@@ -65,7 +65,7 @@ export async function getExpoPushToken(): Promise<string | null> {
 
 // Register device token with backend
 export async function registerDeviceToken(token: string): Promise<boolean> {
-  const response = await apiRequest("/api/notifications/register", {
+  const response = await apiRequest("/api/notifications?action=register", {
     method: "POST",
     body: {
       token,
@@ -78,7 +78,7 @@ export async function registerDeviceToken(token: string): Promise<boolean> {
 
 // Unregister device token
 export async function unregisterDeviceToken(token: string): Promise<boolean> {
-  const response = await apiRequest("/api/notifications/register", {
+  const response = await apiRequest("/api/notifications?action=register", {
     method: "DELETE",
     body: { token },
   });
@@ -89,7 +89,7 @@ export async function unregisterDeviceToken(token: string): Promise<boolean> {
 // Get notification settings from backend
 export async function getNotificationSettings(): Promise<NotificationSettings | null> {
   const response = await apiRequest<{ settings: NotificationSettings }>(
-    "/api/notifications/settings",
+    "/api/notifications?action=settings",
     { method: "GET" }
   );
 
@@ -101,7 +101,7 @@ export async function updateNotificationSettings(
   settings: Partial<NotificationSettings>
 ): Promise<NotificationSettings | null> {
   const response = await apiRequest<{ settings: NotificationSettings }>(
-    "/api/notifications/settings",
+    "/api/notifications?action=settings",
     {
       method: "PUT",
       body: settings,
