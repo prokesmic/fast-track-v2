@@ -55,13 +55,13 @@ export function GoalStep({
   onContinue,
   onBack,
 }: GoalStepProps) {
-  const { colors, isDark } = useTheme();
+  const { theme, isDark } = useTheme();
 
   return (
     <ThemedView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color={colors.text} />
+          <Feather name="arrow-left" size={24} color={theme.text} />
         </TouchableOpacity>
         <ThemedText style={styles.stepIndicator}>Step 1 of 3</ThemedText>
       </View>
@@ -81,7 +81,7 @@ export function GoalStep({
                 {
                   backgroundColor: isDark ? "#1E293B" : "#F8FAFC",
                   borderColor:
-                    selectedGoal === goal.id ? colors.tint : "transparent",
+                    selectedGoal === goal.id ? theme.primary : "transparent",
                   borderWidth: 2,
                 },
               ]}
@@ -93,7 +93,7 @@ export function GoalStep({
                   {
                     backgroundColor:
                       selectedGoal === goal.id
-                        ? colors.tint + "20"
+                        ? theme.primary + "20"
                         : isDark
                           ? "#334155"
                           : "#E2E8F0",
@@ -103,7 +103,7 @@ export function GoalStep({
                 <Feather
                   name={goal.icon}
                   size={24}
-                  color={selectedGoal === goal.id ? colors.tint : colors.text}
+                  color={selectedGoal === goal.id ? theme.primary : theme.text}
                 />
               </View>
               <View style={styles.optionText}>
@@ -113,7 +113,7 @@ export function GoalStep({
                 </ThemedText>
               </View>
               {selectedGoal === goal.id && (
-                <Feather name="check-circle" size={24} color={colors.tint} />
+                <Feather name="check-circle" size={24} color={theme.primary} />
               )}
             </TouchableOpacity>
           ))}
@@ -121,11 +121,9 @@ export function GoalStep({
       </View>
 
       <View style={styles.footer}>
-        <Button
-          title="Continue"
-          onPress={onContinue}
-          disabled={!selectedGoal}
-        />
+        <Button onPress={onContinue} disabled={!selectedGoal}>
+          Continue
+        </Button>
       </View>
     </ThemedView>
   );

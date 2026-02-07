@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
+import { SchedulableTriggerInputTypes } from "expo-notifications";
 import * as Device from "expo-device";
 import { apiRequest } from "./api";
 
@@ -154,7 +155,7 @@ export async function scheduleFastReminder(
   return scheduleLocalNotification(
     "Fast Ending Soon",
     `Your ${planName} fast will complete in 30 minutes!`,
-    { date: reminderTime },
+    { type: SchedulableTriggerInputTypes.DATE, date: reminderTime },
     { type: "fast_reminder" }
   );
 }
@@ -171,7 +172,7 @@ export async function scheduleMilestoneNotification(
   return scheduleLocalNotification(
     "Milestone Reached!",
     `Congratulations! You've been fasting for ${milestoneHours} hours.`,
-    { date: triggerTime },
+    { type: SchedulableTriggerInputTypes.DATE, date: triggerTime },
     { type: "milestone" }
   );
 }

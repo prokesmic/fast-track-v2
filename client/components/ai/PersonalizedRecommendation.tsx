@@ -12,7 +12,7 @@ interface PersonalizedRecommendationProps {
 }
 
 export function PersonalizedRecommendation({ onStartFast }: PersonalizedRecommendationProps) {
-  const { colors, isDark } = useTheme();
+  const { theme, isDark } = useTheme();
   const { insight, isLoading, refresh } = useAIInsight("recommendation");
 
   return (
@@ -22,21 +22,21 @@ export function PersonalizedRecommendation({ onStartFast }: PersonalizedRecommen
         style={[
           styles.accentBar,
           {
-            backgroundColor: colors.tint,
+            backgroundColor: theme.primary,
           },
         ]}
       />
 
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <View style={[styles.iconContainer, { backgroundColor: colors.tint + "20" }]}>
-            <Feather name="compass" size={20} color={colors.tint} />
+          <View style={[styles.iconContainer, { backgroundColor: theme.primary + "20" }]}>
+            <Feather name="compass" size={20} color={theme.primary} />
           </View>
           <View>
             <ThemedText style={styles.title}>For You</ThemedText>
             <View style={styles.aiBadge}>
-              <Feather name="cpu" size={10} color={colors.tint} />
-              <ThemedText style={[styles.aiLabel, { color: colors.tint }]}>
+              <Feather name="cpu" size={10} color={theme.primary} />
+              <ThemedText style={[styles.aiLabel, { color: theme.primary }]}>
                 AI Recommendation
               </ThemedText>
             </View>
@@ -48,7 +48,7 @@ export function PersonalizedRecommendation({ onStartFast }: PersonalizedRecommen
             onPress={refresh}
             style={[styles.refreshButton, { backgroundColor: isDark ? "#334155" : "#F1F5F9" }]}
           >
-            <Feather name="refresh-cw" size={14} color={colors.text} />
+            <Feather name="refresh-cw" size={14} color={theme.text} />
           </TouchableOpacity>
         )}
       </View>
@@ -56,7 +56,7 @@ export function PersonalizedRecommendation({ onStartFast }: PersonalizedRecommen
       <View style={styles.content}>
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color={colors.tint} />
+            <ActivityIndicator size="small" color={theme.primary} />
             <ThemedText style={styles.loadingText}>
               Analyzing your fasting patterns...
             </ThemedText>
@@ -71,8 +71,8 @@ export function PersonalizedRecommendation({ onStartFast }: PersonalizedRecommen
               <TouchableOpacity
                 style={[
                   styles.startButton,
-                  { backgroundColor: colors.tint },
-                  Shadows.coloredLg(colors.tint),
+                  { backgroundColor: theme.primary },
+                  Shadows.coloredLg(theme.primary),
                 ]}
                 onPress={() => onStartFast("16-8")}
               >

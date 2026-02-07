@@ -3,6 +3,7 @@
  */
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { getToken } from "@/lib/auth";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || "";
 
@@ -78,12 +79,13 @@ interface SocialProfile {
 
 // Friends hook
 export function useFriends() {
-  const { token } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [data, setData] = useState<FriendsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchFriends = useCallback(async () => {
+    const token = await getToken();
     if (!token) return;
 
     setIsLoading(true);
@@ -102,7 +104,7 @@ export function useFriends() {
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     fetchFriends();
@@ -110,6 +112,7 @@ export function useFriends() {
 
   const sendRequest = useCallback(
     async (username: string) => {
+      const token = await getToken();
       if (!token) return { success: false, error: "Not authenticated" };
 
       try {
@@ -134,11 +137,12 @@ export function useFriends() {
         return { success: false, error: "Failed to send request" };
       }
     },
-    [token, fetchFriends]
+    [fetchFriends]
   );
 
   const respondToRequest = useCallback(
     async (friendshipId: string, action: "accept" | "reject") => {
+      const token = await getToken();
       if (!token) return { success: false };
 
       try {
@@ -159,11 +163,12 @@ export function useFriends() {
         return { success: false };
       }
     },
-    [token, fetchFriends]
+    [fetchFriends]
   );
 
   const removeFriend = useCallback(
     async (friendshipId: string) => {
+      const token = await getToken();
       if (!token) return { success: false };
 
       try {
@@ -184,7 +189,7 @@ export function useFriends() {
         return { success: false };
       }
     },
-    [token, fetchFriends]
+    [fetchFriends]
   );
 
   return {
@@ -202,12 +207,13 @@ export function useFriends() {
 
 // Challenges hook
 export function useChallenges(type: "mine" | "public" | "active" = "active") {
-  const { token } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchChallenges = useCallback(async () => {
+    const token = await getToken();
     if (!token) return;
 
     setIsLoading(true);
@@ -229,7 +235,7 @@ export function useChallenges(type: "mine" | "public" | "active" = "active") {
     } finally {
       setIsLoading(false);
     }
-  }, [token, type]);
+  }, [isAuthenticated, type]);
 
   useEffect(() => {
     fetchChallenges();
@@ -245,6 +251,7 @@ export function useChallenges(type: "mine" | "public" | "active" = "active") {
       endDate: string;
       isPublic?: boolean;
     }) => {
+      const token = await getToken();
       if (!token) return { success: false, error: "Not authenticated" };
 
       try {
@@ -269,11 +276,12 @@ export function useChallenges(type: "mine" | "public" | "active" = "active") {
         return { success: false, error: "Failed to create challenge" };
       }
     },
-    [token, fetchChallenges]
+    [fetchChallenges]
   );
 
   const joinChallenge = useCallback(
     async (challengeId?: string, inviteCode?: string) => {
+      const token = await getToken();
       if (!token) return { success: false };
 
       try {
@@ -297,11 +305,12 @@ export function useChallenges(type: "mine" | "public" | "active" = "active") {
         return { success: false, error: "Failed to join challenge" };
       }
     },
-    [token, fetchChallenges]
+    [fetchChallenges]
   );
 
   const leaveChallenge = useCallback(
     async (challengeId: string) => {
+      const token = await getToken();
       if (!token) return { success: false };
 
       try {
@@ -322,7 +331,7 @@ export function useChallenges(type: "mine" | "public" | "active" = "active") {
         return { success: false };
       }
     },
-    [token, fetchChallenges]
+    [fetchChallenges]
   );
 
   return {
@@ -342,12 +351,13 @@ export function useLeaderboard(
   period: "week" | "month" | "all" = "all",
   challengeId?: string
 ) {
-  const { token } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [userRank, setUserRank] = useState<LeaderboardEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchLeaderboard = useCallback(async () => {
+    const token = await getToken();
     if (!token) return;
 
     setIsLoading(true);
@@ -372,7 +382,7 @@ export function useLeaderboard(
     } finally {
       setIsLoading(false);
     }
-  }, [token, type, period, challengeId]);
+  }, [isAuthenticated, type, period, challengeId]);
 
   useEffect(() => {
     fetchLeaderboard();
@@ -388,11 +398,12 @@ export function useLeaderboard(
 
 // Feed hook
 export function useFeed(type: "all" | "public" | "mine" = "all") {
-  const { token } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchFeed = useCallback(async () => {
+    const token = await getToken();
     if (!token) return;
 
     setIsLoading(true);
@@ -410,7 +421,7 @@ export function useFeed(type: "all" | "public" | "mine" = "all") {
     } finally {
       setIsLoading(false);
     }
-  }, [token, type]);
+  }, [isAuthenticated, type]);
 
   useEffect(() => {
     fetchFeed();
@@ -423,6 +434,7 @@ export function useFeed(type: "all" | "public" | "mine" = "all") {
       metadata?: Record<string, any>;
       visibility?: string;
     }) => {
+      const token = await getToken();
       if (!token) return { success: false };
 
       try {
@@ -443,11 +455,12 @@ export function useFeed(type: "all" | "public" | "mine" = "all") {
         return { success: false };
       }
     },
-    [token, fetchFeed]
+    [fetchFeed]
   );
 
   const likePost = useCallback(
     async (postId: string) => {
+      const token = await getToken();
       if (!token) return;
 
       // Optimistic update
@@ -479,11 +492,12 @@ export function useFeed(type: "all" | "public" | "mine" = "all") {
         );
       }
     },
-    [token]
+    []
   );
 
   const unlikePost = useCallback(
     async (postId: string) => {
+      const token = await getToken();
       if (!token) return;
 
       // Optimistic update
@@ -515,11 +529,12 @@ export function useFeed(type: "all" | "public" | "mine" = "all") {
         );
       }
     },
-    [token]
+    []
   );
 
   const deletePost = useCallback(
     async (postId: string) => {
+      const token = await getToken();
       if (!token) return { success: false };
 
       try {
@@ -540,7 +555,7 @@ export function useFeed(type: "all" | "public" | "mine" = "all") {
         return { success: false };
       }
     },
-    [token]
+    []
   );
 
   return {
@@ -556,11 +571,12 @@ export function useFeed(type: "all" | "public" | "mine" = "all") {
 
 // Social profile hook
 export function useSocialProfile() {
-  const { token } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [profile, setProfile] = useState<SocialProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchProfile = useCallback(async () => {
+    const token = await getToken();
     if (!token) return;
 
     setIsLoading(true);
@@ -578,7 +594,7 @@ export function useSocialProfile() {
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     fetchProfile();
@@ -586,6 +602,7 @@ export function useSocialProfile() {
 
   const updateProfile = useCallback(
     async (updates: Partial<SocialProfile>) => {
+      const token = await getToken();
       if (!token) return { success: false, error: "Not authenticated" };
 
       try {
@@ -610,11 +627,12 @@ export function useSocialProfile() {
         return { success: false, error: "Failed to update profile" };
       }
     },
-    [token]
+    []
   );
 
   const searchUsers = useCallback(
     async (query: string) => {
+      const token = await getToken();
       if (!token || query.length < 2) return [];
 
       try {
@@ -633,7 +651,7 @@ export function useSocialProfile() {
         return [];
       }
     },
-    [token]
+    []
   );
 
   return {

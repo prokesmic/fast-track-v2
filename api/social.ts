@@ -155,10 +155,7 @@ async function handleChallenges(req: VercelRequest, res: VercelResponse, userId:
       .select()
       .from(schema.challenges)
       .where(
-        and(
-          gte(schema.challenges.endDate, now),
-          eq(schema.challenges.status, "active")
-        )
+        gte(schema.challenges.endDate, now)
       )
       .orderBy(desc(schema.challenges.createdAt));
 
@@ -185,11 +182,10 @@ async function handleChallenges(req: VercelRequest, res: VercelResponse, userId:
           name,
           description,
           type: type || "total_hours",
-          target: target || 100,
+          targetValue: target || 100,
           startDate: new Date(startDate),
           endDate: new Date(endDate),
           isPublic: isPublic ?? true,
-          status: "active",
         })
         .returning();
 
@@ -316,7 +312,7 @@ async function handleFeed(req: VercelRequest, res: VercelResponse, userId: strin
           userId,
           type: type || "achievement",
           content,
-          data: data ? JSON.stringify(data) : null,
+          metadata: data ? JSON.stringify(data) : null,
           likesCount: 0,
         })
         .returning();
@@ -422,7 +418,6 @@ async function handleProfile(req: VercelRequest, res: VercelResponse, userId: st
     const [created] = await db
       .insert(schema.userProfiles)
       .values({
-        id: `up_${Date.now()}`,
         userId,
         username,
         bio,

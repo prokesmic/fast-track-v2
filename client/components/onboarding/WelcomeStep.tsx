@@ -13,13 +13,13 @@ interface WelcomeStepProps {
 const { width } = Dimensions.get("window");
 
 export function WelcomeStep({ onContinue }: WelcomeStepProps) {
-  const { colors } = useTheme();
+  const { theme } = useTheme();
 
   return (
     <ThemedView style={styles.container}>
       <View style={styles.content}>
-        <View style={[styles.iconContainer, { backgroundColor: colors.tint + "20" }]}>
-          <Feather name="clock" size={64} color={colors.tint} />
+        <View style={[styles.iconContainer, { backgroundColor: theme.primary + "20" }]}>
+          <Feather name="clock" size={64} color={theme.primary} />
         </View>
 
         <ThemedText style={styles.title}>Welcome to FastTrack</ThemedText>
@@ -33,25 +33,25 @@ export function WelcomeStep({ onContinue }: WelcomeStepProps) {
             icon="target"
             title="Track Your Fasts"
             description="Monitor your fasting progress in real-time"
-            color={colors.tint}
+            color={theme.primary}
           />
           <FeatureItem
             icon="award"
             title="Earn Badges"
             description="Unlock achievements as you reach milestones"
-            color={colors.tint}
+            color={theme.primary}
           />
           <FeatureItem
             icon="trending-up"
             title="Build Habits"
             description="Develop consistent fasting routines"
-            color={colors.tint}
+            color={theme.primary}
           />
         </View>
       </View>
 
       <View style={styles.footer}>
-        <Button title="Get Started" onPress={onContinue} />
+        <Button onPress={onContinue}>Get Started</Button>
       </View>
     </ThemedView>
   );

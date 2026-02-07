@@ -53,13 +53,13 @@ export function ExperienceStep({
   onContinue,
   onBack,
 }: ExperienceStepProps) {
-  const { colors, isDark } = useTheme();
+  const { theme, isDark } = useTheme();
 
   return (
     <ThemedView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color={colors.text} />
+          <Feather name="arrow-left" size={24} color={theme.text} />
         </TouchableOpacity>
         <ThemedText style={styles.stepIndicator}>Step 2 of 3</ThemedText>
       </View>
@@ -79,7 +79,7 @@ export function ExperienceStep({
                 {
                   backgroundColor: isDark ? "#1E293B" : "#F8FAFC",
                   borderColor:
-                    selectedLevel === level.id ? colors.tint : "transparent",
+                    selectedLevel === level.id ? theme.primary : "transparent",
                   borderWidth: 2,
                 },
               ]}
@@ -91,7 +91,7 @@ export function ExperienceStep({
                   {
                     backgroundColor:
                       selectedLevel === level.id
-                        ? colors.tint + "20"
+                        ? theme.primary + "20"
                         : isDark
                           ? "#334155"
                           : "#E2E8F0",
@@ -101,7 +101,7 @@ export function ExperienceStep({
                 <Feather
                   name={level.icon}
                   size={24}
-                  color={selectedLevel === level.id ? colors.tint : colors.text}
+                  color={selectedLevel === level.id ? theme.primary : theme.text}
                 />
               </View>
               <View style={styles.optionText}>
@@ -110,13 +110,13 @@ export function ExperienceStep({
                   {level.description}
                 </ThemedText>
                 <View style={styles.recommendedBadge}>
-                  <ThemedText style={[styles.recommendedText, { color: colors.tint }]}>
+                  <ThemedText style={[styles.recommendedText, { color: theme.primary }]}>
                     Recommended: {level.recommendedPlan}
                   </ThemedText>
                 </View>
               </View>
               {selectedLevel === level.id && (
-                <Feather name="check-circle" size={24} color={colors.tint} />
+                <Feather name="check-circle" size={24} color={theme.primary} />
               )}
             </TouchableOpacity>
           ))}
@@ -124,11 +124,9 @@ export function ExperienceStep({
       </View>
 
       <View style={styles.footer}>
-        <Button
-          title="Continue"
-          onPress={onContinue}
-          disabled={!selectedLevel}
-        />
+        <Button onPress={onContinue} disabled={!selectedLevel}>
+          Continue
+        </Button>
       </View>
     </ThemedView>
   );

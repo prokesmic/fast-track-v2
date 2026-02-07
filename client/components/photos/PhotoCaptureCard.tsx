@@ -82,7 +82,7 @@ export default function PhotoCaptureCard({
         styles.card,
         {
           backgroundColor: theme.cardBackground,
-          borderColor: hasExisting ? theme.primary : theme.border,
+          borderColor: hasExisting ? theme.primary : theme.cardBorder,
           borderWidth: hasExisting ? 2 : 1,
         },
       ]}
@@ -96,7 +96,7 @@ export default function PhotoCaptureCard({
           <View
             style={[
               styles.iconContainer,
-              { backgroundColor: hasExisting ? theme.primary + "20" : theme.border },
+              { backgroundColor: hasExisting ? theme.primary + "20" : theme.cardBorder },
             ]}
           >
             <Feather

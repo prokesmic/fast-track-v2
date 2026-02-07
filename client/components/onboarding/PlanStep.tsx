@@ -45,14 +45,14 @@ export function PlanStep({
   onComplete,
   onBack,
 }: PlanStepProps) {
-  const { colors, isDark } = useTheme();
+  const { theme, isDark } = useTheme();
   const recommendedPlans = getRecommendedPlans(experienceLevel);
 
   return (
     <ThemedView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color={colors.text} />
+          <Feather name="arrow-left" size={24} color={theme.text} />
         </TouchableOpacity>
         <ThemedText style={styles.stepIndicator}>Step 3 of 3</ThemedText>
       </View>
@@ -72,14 +72,14 @@ export function PlanStep({
                 {
                   backgroundColor: isDark ? "#1E293B" : "#F8FAFC",
                   borderColor:
-                    selectedPlanId === plan.id ? colors.tint : "transparent",
+                    selectedPlanId === plan.id ? theme.primary : "transparent",
                   borderWidth: 2,
                 },
               ]}
               onPress={() => onSelectPlan(plan.id)}
             >
               {index === 0 && (
-                <View style={[styles.recommendedTag, { backgroundColor: colors.tint }]}>
+                <View style={[styles.recommendedTag, { backgroundColor: theme.primary }]}>
                   <ThemedText style={styles.recommendedTagText}>
                     Best Match
                   </ThemedText>
@@ -93,7 +93,7 @@ export function PlanStep({
                     {
                       backgroundColor:
                         selectedPlanId === plan.id
-                          ? colors.tint + "20"
+                          ? theme.primary + "20"
                           : isDark
                             ? "#334155"
                             : "#E2E8F0",
@@ -105,7 +105,7 @@ export function PlanStep({
                       styles.planHours,
                       {
                         color:
-                          selectedPlanId === plan.id ? colors.tint : colors.text,
+                          selectedPlanId === plan.id ? theme.primary : theme.text,
                       },
                     ]}
                   >
@@ -142,7 +142,7 @@ export function PlanStep({
                 </View>
 
                 {selectedPlanId === plan.id && (
-                  <Feather name="check-circle" size={24} color={colors.tint} />
+                  <Feather name="check-circle" size={24} color={theme.primary} />
                 )}
               </View>
 
@@ -159,19 +159,17 @@ export function PlanStep({
             // Could navigate to Plans screen or expand
           }}
         >
-          <ThemedText style={[styles.viewAllText, { color: colors.tint }]}>
+          <ThemedText style={[styles.viewAllText, { color: theme.primary }]}>
             View all {FASTING_PLANS.length} plans
           </ThemedText>
-          <Feather name="chevron-right" size={16} color={colors.tint} />
+          <Feather name="chevron-right" size={16} color={theme.primary} />
         </TouchableOpacity>
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button
-          title="Start Fasting"
-          onPress={onComplete}
-          disabled={!selectedPlanId}
-        />
+        <Button onPress={onComplete} disabled={!selectedPlanId}>
+          Start Fasting
+        </Button>
       </View>
     </ThemedView>
   );

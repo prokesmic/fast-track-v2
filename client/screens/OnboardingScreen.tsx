@@ -22,7 +22,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "Onboarding">;
 type OnboardingStep = "welcome" | "goal" | "experience" | "plan";
 
 export default function OnboardingScreen({ navigation }: Props) {
-  const { colors } = useTheme();
+  const { theme } = useTheme();
   const {
     trackOnboardingStarted,
     trackOnboardingStepCompleted,
@@ -156,7 +156,7 @@ export default function OnboardingScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
+      style={[styles.container, { backgroundColor: theme.backgroundDefault }]}
       edges={["top", "bottom"]}
     >
       {renderStep()}

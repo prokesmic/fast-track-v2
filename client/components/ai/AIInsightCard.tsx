@@ -37,7 +37,7 @@ const INSIGHT_CONFIG: Record<InsightType, { icon: keyof typeof Feather.glyphMap;
 };
 
 export function AIInsightCard({ type, title, showRefresh = true }: AIInsightCardProps) {
-  const { colors, isDark } = useTheme();
+  const { theme, isDark } = useTheme();
   const { insight, isLoading, error, refresh } = useAIInsight(type);
   const config = INSIGHT_CONFIG[type];
 
@@ -53,8 +53,8 @@ export function AIInsightCard({ type, title, showRefresh = true }: AIInsightCard
               {title || config.defaultTitle}
             </ThemedText>
             <View style={styles.aiBadge}>
-              <Feather name="cpu" size={10} color={colors.tint} />
-              <ThemedText style={[styles.aiLabel, { color: colors.tint }]}>
+              <Feather name="cpu" size={10} color={theme.primary} />
+              <ThemedText style={[styles.aiLabel, { color: theme.primary }]}>
                 AI Powered
               </ThemedText>
             </View>
@@ -66,7 +66,7 @@ export function AIInsightCard({ type, title, showRefresh = true }: AIInsightCard
             onPress={refresh}
             style={[styles.refreshButton, { backgroundColor: isDark ? "#334155" : "#F1F5F9" }]}
           >
-            <Feather name="refresh-cw" size={14} color={colors.text} />
+            <Feather name="refresh-cw" size={14} color={theme.text} />
           </TouchableOpacity>
         )}
       </View>

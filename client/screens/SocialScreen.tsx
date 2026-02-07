@@ -708,13 +708,13 @@ const styles = StyleSheet.create({
     width: 80,
   },
   podiumFirst: {
-    order: 2,
+    // First place (center) - visual positioning handled in component
   },
   podiumSecond: {
-    order: 1,
+    // Second place (left) - visual positioning handled in component
   },
   podiumThird: {
-    order: 3,
+    // Third place (right) - visual positioning handled in component
   },
   podiumAvatar: {
     width: 60,

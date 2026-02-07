@@ -92,3 +92,32 @@ export async function requireAuth(
   }
   return result.user;
 }
+
+// Simple auth verification - returns success/userId or error
+export async function verifyAuth(
+  req: VercelRequest
+): Promise<{ success: true; userId: string } | { success: false; error: string }> {
+  const token = extractToken(req);
+
+  if (!token) {
+    return { success: false, error: "No token provided" };
+  }
+
+  const payload = verifyToken(token);
+  if (!payload) {
+    return { success: false, error: "Invalid or expired token" };
+  }
+
+  // Verify user still exists
+  const user = await db
+    .select({ id: schema.users.id })
+    .from(schema.users)
+    .where(eq(schema.users.id, payload.userId))
+    .limit(1);
+
+  if (user.length === 0) {
+    return { success: false, error: "User not found" };
+  }
+
+  return { success: true, userId: payload.userId };
+}

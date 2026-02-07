@@ -171,7 +171,7 @@ export default function PhotoComparison({
               currentPair.after.weight < currentPair.before.weight
                 ? theme.success
                 : currentPair.after.weight > currentPair.before.weight
-                ? theme.error
+                ? theme.destructive
                 : theme.textSecondary
             }
           />
