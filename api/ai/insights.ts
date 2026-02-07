@@ -26,6 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const userId = authResult.user.userId;
   const insightType = (req.query.type as InsightType) || "motivation";
+  const forceRefresh = req.query.refresh === "true";
 
   // Validate insight type
   const validTypes: InsightType[] = [
@@ -39,27 +40,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Check cache first
     const now = new Date();
-    const cachedInsights = await db
-      .select()
-      .from(schema.aiInsightsCache)
-      .where(
-        and(
-          eq(schema.aiInsightsCache.userId, userId),
-          eq(schema.aiInsightsCache.insightType, insightType),
-          gt(schema.aiInsightsCache.validUntil, now)
-        )
-      )
-      .limit(1);
 
-    if (cachedInsights.length > 0) {
-      return res.status(200).json({
-        insight: cachedInsights[0].content,
-        type: insightType,
-        cached: true,
-        validUntil: cachedInsights[0].validUntil,
-      });
+    // If force refresh, delete existing cache first
+    if (forceRefresh) {
+      await db
+        .delete(schema.aiInsightsCache)
+        .where(
+          and(
+            eq(schema.aiInsightsCache.userId, userId),
+            eq(schema.aiInsightsCache.insightType, insightType)
+          )
+        );
+    } else {
+      // Check cache first (only if not forcing refresh)
+      const cachedInsights = await db
+        .select()
+        .from(schema.aiInsightsCache)
+        .where(
+          and(
+            eq(schema.aiInsightsCache.userId, userId),
+            eq(schema.aiInsightsCache.insightType, insightType),
+            gt(schema.aiInsightsCache.validUntil, now)
+          )
+        )
+        .limit(1);
+
+      if (cachedInsights.length > 0) {
+        return res.status(200).json({
+          insight: cachedInsights[0].content,
+          type: insightType,
+          cached: true,
+          validUntil: cachedInsights[0].validUntil,
+        });
+      }
     }
 
     // Fetch user's fasting data for context

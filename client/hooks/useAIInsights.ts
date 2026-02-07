@@ -75,13 +75,15 @@ export function useAIInsight(type: InsightType): UseAIInsightsResult {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchInsight = useCallback(async () => {
-    // First check local cache
-    const cached = await getCachedInsight(type);
-    if (cached) {
-      setInsight(cached);
-      setIsLoading(false);
-      return;
+  const fetchInsight = useCallback(async (forceRefresh = false) => {
+    // First check local cache (skip if forcing refresh)
+    if (!forceRefresh) {
+      const cached = await getCachedInsight(type);
+      if (cached) {
+        setInsight(cached);
+        setIsLoading(false);
+        return;
+      }
     }
 
     // If not authenticated, use a fallback
@@ -100,10 +102,10 @@ export function useAIInsight(type: InsightType): UseAIInsightsResult {
     setError(null);
 
     try {
-      const response = await apiRequest<InsightResponse>(
-        `/api/ai/insights?type=${type}`,
-        { method: "GET" }
-      );
+      const url = forceRefresh
+        ? `/api/ai/insights?type=${type}&refresh=true`
+        : `/api/ai/insights?type=${type}`;
+      const response = await apiRequest<InsightResponse>(url, { method: "GET" });
 
       if (response.error) {
         setError(response.error);
@@ -141,9 +143,9 @@ export function useAIInsight(type: InsightType): UseAIInsightsResult {
   }, [fetchInsight]);
 
   const refresh = useCallback(async () => {
-    // Clear local cache and refetch
+    // Clear local cache and refetch with force refresh
     await AsyncStorage.removeItem(getCacheKey(type));
-    await fetchInsight();
+    await fetchInsight(true);
   }, [type, fetchInsight]);
 
   return {
