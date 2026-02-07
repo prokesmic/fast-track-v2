@@ -269,24 +269,38 @@ async function handleLeaderboard(req: VercelRequest, res: VercelResponse, userId
       startDate.setHours(0, 0, 0, 0);
   }
 
+  // Both startTime and endTime are stored as bigint milliseconds
+  // Calculate hours: (endTime - startTime) / (1000 * 60 * 60)
+  const hoursExpr = sql<number>`SUM((${schema.fasts.endTime} - ${schema.fasts.startTime}) / 3600000.0)`;
+
   const fasts = await db
     .select({
       odUserId: schema.fasts.userId,
-      totalHours: sql<number>`SUM((EXTRACT(EPOCH FROM (${schema.fasts.endTime}::timestamp - to_timestamp(${schema.fasts.startTime}/1000))) / 3600))`,
+      totalHours: hoursExpr,
       fastCount: count(schema.fasts.id),
     })
     .from(schema.fasts)
     .where(
       and(
         gte(schema.fasts.endTime, startDate.getTime()),
-        sql`${schema.fasts.endTime} IS NOT NULL`
+        sql`${schema.fasts.endTime} IS NOT NULL`,
+        eq(schema.fasts.completed, true)
       )
     )
     .groupBy(schema.fasts.userId)
-    .orderBy(type === "count" ? desc(count(schema.fasts.id)) : desc(sql`SUM((EXTRACT(EPOCH FROM (${schema.fasts.endTime}::timestamp - to_timestamp(${schema.fasts.startTime}/1000))) / 3600))`))
+    .orderBy(type === "count" ? desc(count(schema.fasts.id)) : desc(hoursExpr))
     .limit(50);
 
-  return res.status(200).json({ leaderboard: fasts, period, type });
+  // Format the response with ranks
+  const leaderboard = fasts.map((entry, index) => ({
+    rank: index + 1,
+    userId: entry.odUserId,
+    totalHours: Math.round((entry.totalHours || 0) * 10) / 10,
+    fastCount: entry.fastCount,
+    isCurrentUser: entry.odUserId === userId,
+  }));
+
+  return res.status(200).json({ leaderboard, period, type });
 }
 
 // Feed handlers
