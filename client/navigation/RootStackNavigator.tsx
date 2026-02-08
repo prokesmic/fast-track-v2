@@ -10,6 +10,8 @@ import OnboardingScreen from "@/screens/OnboardingScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 import BadgesScreen from "@/screens/BadgesScreen";
 import ProgressPhotosScreen from "@/screens/ProgressPhotosScreen";
+import CircleDetailScreen from "@/screens/CircleDetailScreen";
+import AICoachScreen from "@/screens/AICoachScreen";
 import { getFasts, getProfile } from "@/lib/storage";
 
 export type FastingPlan = {
@@ -32,6 +34,8 @@ export type RootStackParamList = {
   FastingStages: { hoursElapsed?: number };
   Badges: undefined;
   ProgressPhotos: undefined;
+  CircleDetail: { circleId: string };
+  AICoach: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -121,6 +125,22 @@ export default function RootStackNavigator() {
         component={ProgressPhotosScreen}
         options={{
           headerTitle: "Progress Photos",
+          headerTransparent: true,
+          headerBlurEffect: "regular",
+        }}
+      />
+      <Stack.Screen
+        name="CircleDetail"
+        component={CircleDetailScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="AICoach"
+        component={AICoachScreen}
+        options={{
+          headerTitle: "AI Coach",
           headerTransparent: true,
           headerBlurEffect: "regular",
         }}

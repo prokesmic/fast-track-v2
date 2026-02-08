@@ -11,12 +11,20 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 import { ThemedText } from "@/components/ThemedText";
 import { GlassCard } from "@/components/GlassCard";
 import { GradientBackground } from "@/components/GradientBackground";
+import { WeeklyChallengeCard } from "@/components/social/WeeklyChallengeCard";
+import { CircleCard } from "@/components/circles/CircleCard";
+import { CreateCircleModal } from "@/components/circles/CreateCircleModal";
+import { JoinCircleModal } from "@/components/circles/JoinCircleModal";
 import { useTheme } from "@/hooks/useTheme";
+import { useCircles } from "@/hooks/useCircles";
 import { useAuth } from "@/context/AuthContext";
 import {
   useFriends,
@@ -25,21 +33,37 @@ import {
   useFeed,
   useSocialProfile,
 } from "@/hooks/useSocial";
+import { useWeeklyChallenges } from "@/hooks/useWeeklyChallenges";
 import { Spacing, Colors, BorderRadius, Shadows } from "@/constants/theme";
 import { safeHaptics, showAlert } from "@/lib/platform";
 
-type TabType = "feed" | "friends" | "challenges" | "leaderboard";
+type TabType = "feed" | "friends" | "challenges" | "circles" | "leaderboard";
+
+type RootStackParamList = {
+  CircleDetail: { circleId: string };
+  AICoach: undefined;
+};
 
 export default function SocialScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { t } = useTranslation();
   const { theme, colorScheme } = useTheme();
   const colors = Colors[colorScheme];
   const { isAuthenticated } = useAuth();
 
   const [activeTab, setActiveTab] = useState<TabType>("feed");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showCreateCircle, setShowCreateCircle] = useState(false);
+  const [showJoinCircle, setShowJoinCircle] = useState(false);
+
+  // Weekly challenge hook
+  const { refresh: refreshWeeklyChallenge } = useWeeklyChallenges();
+
+  // Circles hook
+  const { circles, isLoading: circlesLoading, refresh: refreshCircles } = useCircles();
 
   // Hooks
   const { friends, pendingReceived, isLoading: friendsLoading, sendRequest, respondToRequest, refresh: refreshFriends } = useFriends();
@@ -53,6 +77,7 @@ export default function SocialScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     safeHaptics.impactAsync();
+    await refreshWeeklyChallenge();
     if (activeTab === "feed") await refreshFeed();
     else if (activeTab === "friends") await refreshFriends();
     else if (activeTab === "challenges") await refreshChallenges();
@@ -77,40 +102,44 @@ export default function SocialScreen() {
     );
   }
 
+  const TAB_CONFIG: { key: TabType; icon: string; label: string }[] = [
+    { key: "feed", icon: "rss", label: t("social.feed") },
+    { key: "friends", icon: "users", label: t("social.friends") },
+    { key: "challenges", icon: "flag", label: t("social.challenges") },
+    { key: "circles", icon: "circle", label: t("social.circles") },
+    { key: "leaderboard", icon: "award", label: t("social.leaderboard") },
+  ];
+
   const renderTabs = () => (
     <View style={styles.tabContainer}>
-      {(["feed", "friends", "challenges", "leaderboard"] as TabType[]).map((tab) => (
+      {TAB_CONFIG.map(({ key, icon, label }) => (
         <Pressable
-          key={tab}
+          key={key}
           onPress={() => {
             safeHaptics.selectionAsync();
-            setActiveTab(tab);
+            setActiveTab(key);
           }}
           style={[
             styles.tab,
             {
-              backgroundColor: activeTab === tab ? colors.primary + "20" : "transparent",
-              borderColor: activeTab === tab ? colors.primary : "transparent",
+              backgroundColor: activeTab === key ? colors.primary + "20" : "transparent",
+              borderColor: activeTab === key ? colors.primary : "transparent",
             },
           ]}
         >
           <Feather
-            name={
-              tab === "feed" ? "rss" :
-              tab === "friends" ? "users" :
-              tab === "challenges" ? "flag" : "award"
-            }
+            name={icon as any}
             size={16}
-            color={activeTab === tab ? colors.primary : theme.textSecondary}
+            color={activeTab === key ? colors.primary : theme.textSecondary}
           />
           <ThemedText
             type="caption"
             style={{
-              color: activeTab === tab ? colors.primary : theme.textSecondary,
-              fontWeight: activeTab === tab ? "700" : "500",
+              color: activeTab === key ? colors.primary : theme.textSecondary,
+              fontWeight: activeTab === key ? "700" : "500",
             }}
           >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {label}
           </ThemedText>
         </Pressable>
       ))}
@@ -119,16 +148,19 @@ export default function SocialScreen() {
 
   const renderFeed = () => (
     <View style={styles.tabContent}>
+      {/* Weekly Challenge Banner */}
+      <WeeklyChallengeCard />
+
       {feedLoading ? (
         <ActivityIndicator size="large" color={colors.primary} />
       ) : posts.length === 0 ? (
         <GlassCard style={styles.emptyCard}>
           <Feather name="inbox" size={48} color={theme.textTertiary} />
           <ThemedText type="bodyMedium" style={{ color: theme.textSecondary, marginTop: Spacing.md }}>
-            No posts yet
+            {t("social.noPosts")}
           </ThemedText>
           <ThemedText type="caption" style={{ color: theme.textTertiary }}>
-            Complete fasts and earn badges to share with friends
+            {t("social.createPostHint")}
           </ThemedText>
         </GlassCard>
       ) : (
@@ -515,6 +547,60 @@ export default function SocialScreen() {
     </View>
   );
 
+  const renderCircles = () => (
+    <View style={styles.tabContent}>
+      {/* Action buttons */}
+      <View style={styles.circleActions}>
+        <Pressable
+          onPress={() => {
+            safeHaptics.impactAsync();
+            setShowCreateCircle(true);
+          }}
+          style={[styles.circleButton, { backgroundColor: colors.primary }]}
+        >
+          <Feather name="plus" size={16} color="#FFFFFF" />
+          <ThemedText type="caption" style={{ color: "#FFFFFF", fontWeight: "600" }}>
+            {t("circles.create")}
+          </ThemedText>
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            safeHaptics.impactAsync();
+            setShowJoinCircle(true);
+          }}
+          style={[styles.circleButton, { backgroundColor: colors.secondary }]}
+        >
+          <Feather name="log-in" size={16} color="#FFFFFF" />
+          <ThemedText type="caption" style={{ color: "#FFFFFF", fontWeight: "600" }}>
+            {t("circles.join")}
+          </ThemedText>
+        </Pressable>
+      </View>
+
+      {circlesLoading ? (
+        <ActivityIndicator size="large" color={colors.primary} />
+      ) : circles.length === 0 ? (
+        <GlassCard style={styles.emptyCard}>
+          <Feather name="users" size={48} color={theme.textTertiary} />
+          <ThemedText type="bodyMedium" style={{ color: theme.textSecondary, marginTop: Spacing.md }}>
+            {t("circles.noCircles")}
+          </ThemedText>
+          <ThemedText type="caption" style={{ color: theme.textTertiary, textAlign: "center" }}>
+            {t("circles.createHint")}
+          </ThemedText>
+        </GlassCard>
+      ) : (
+        circles.map((circle) => (
+          <CircleCard
+            key={circle.id}
+            circle={circle}
+            onPress={() => navigation.navigate("CircleDetail", { circleId: circle.id })}
+          />
+        ))
+      )}
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <GradientBackground variant="profile" />
@@ -535,8 +621,27 @@ export default function SocialScreen() {
         {activeTab === "feed" && renderFeed()}
         {activeTab === "friends" && renderFriends()}
         {activeTab === "challenges" && renderChallenges()}
+        {activeTab === "circles" && renderCircles()}
         {activeTab === "leaderboard" && renderLeaderboard()}
       </ScrollView>
+
+      {/* Circle Modals */}
+      <CreateCircleModal
+        visible={showCreateCircle}
+        onClose={() => setShowCreateCircle(false)}
+        onCreated={(circleId) => {
+          refreshCircles();
+          navigation.navigate("CircleDetail", { circleId });
+        }}
+      />
+      <JoinCircleModal
+        visible={showJoinCircle}
+        onClose={() => setShowJoinCircle(false)}
+        onJoined={(circleId) => {
+          refreshCircles();
+          navigation.navigate("CircleDetail", { circleId });
+        }}
+      />
     </View>
   );
 }
@@ -730,5 +835,18 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.05)",
+  },
+  circleActions: {
+    flexDirection: "row",
+    gap: Spacing.md,
+    marginTop: Spacing.lg,
+  },
+  circleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.lg,
   },
 });

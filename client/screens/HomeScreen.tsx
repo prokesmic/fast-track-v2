@@ -588,6 +588,30 @@ export default function HomeScreen() {
                     }}
                   />
                 )}
+
+                {/* AI Coach Card */}
+                <Pressable
+                  onPress={() => {
+                    safeHaptics.impactAsync();
+                    navigation.navigate("AICoach");
+                  }}
+                  style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+                >
+                  <GlassCard accentColor={colors.secondary}>
+                    <View style={styles.aiCoachContent}>
+                      <View style={[styles.aiCoachIcon, { backgroundColor: colors.secondary + "20" }]}>
+                        <Feather name="cpu" size={28} color={colors.secondary} />
+                      </View>
+                      <View style={styles.aiCoachText}>
+                        <ThemedText type="h4">AI Fasting Coach</ThemedText>
+                        <ThemedText type="body" style={{ color: theme.textSecondary }}>
+                          Get personalized advice and answers
+                        </ThemedText>
+                      </View>
+                      <Feather name="chevron-right" size={24} color={theme.textSecondary} />
+                    </View>
+                  </GlassCard>
+                </Pressable>
               </>
             )}
         </ScrollView>
@@ -819,5 +843,21 @@ const styles = StyleSheet.create({
   fabContainer: {
     position: "absolute",
     right: Spacing.xl,
+  },
+  aiCoachContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
+  },
+  aiCoachIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  aiCoachText: {
+    flex: 1,
+    gap: 2,
   },
 });

@@ -36,6 +36,8 @@ import { FastEditModal } from "@/components/FastEditModal";
 import { Fast } from "@/lib/storage";
 import { ENV, currentEnvConfig, isProduction } from "@/lib/environment";
 import { APP_VERSION, formatDeploymentDate, DEPLOYMENT_DATE } from "@/lib/appInfo";
+import { useTranslation } from "react-i18next";
+import { LANGUAGES, changeLanguage, getCurrentLanguage, LanguageCode } from "@/i18n";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -133,12 +135,14 @@ type RootStackParamList = {
 };
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { theme, colorScheme, themeType, setThemeType } = useTheme();
   const colors = Colors[colorScheme];
+  const [currentLang, setCurrentLang] = useState<LanguageCode>(getCurrentLanguage());
   const { stats, refresh, fasts, activeFast, cancelFast, deleteFast, updateFast } = useFasting();
   const { user, isAuthenticated, logout } = useAuth();
   const { syncStatus, lastSyncTime: globalLastSyncTime, syncNow } = useSync();
@@ -673,6 +677,54 @@ export default function ProfileScreen() {
                     }}
                   >
                     {t.charAt(0).toUpperCase() + t.slice(1)}
+                  </ThemedText>
+                </Pressable>
+              ))}
+            </View>
+
+            <View style={[styles.settingDivider, { backgroundColor: theme.cardBorder }]} />
+
+            {/* Language Selector */}
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <View style={[styles.settingIcon, { backgroundColor: colors.secondary + "15" }]}>
+                  <Feather name="globe" size={18} color={colors.secondary} />
+                </View>
+                <View>
+                  <ThemedText type="bodyMedium">Language</ThemedText>
+                  <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                    {LANGUAGES.find(l => l.code === currentLang)?.nativeName || "English"}
+                  </ThemedText>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.languageSelector}>
+              {LANGUAGES.map((lang) => (
+                <Pressable
+                  key={lang.code}
+                  onPress={async () => {
+                    safeHaptics.selectionAsync();
+                    setCurrentLang(lang.code);
+                    await changeLanguage(lang.code);
+                  }}
+                  style={[
+                    styles.languageOption,
+                    {
+                      backgroundColor: currentLang === lang.code ? colors.secondary + "15" : theme.backgroundTertiary,
+                      borderColor: currentLang === lang.code ? colors.secondary : "transparent",
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <ThemedText
+                    type="caption"
+                    style={{
+                      color: currentLang === lang.code ? colors.secondary : theme.textSecondary,
+                      fontWeight: currentLang === lang.code ? "700" : "500",
+                    }}
+                  >
+                    {lang.nativeName}
                   </ThemedText>
                 </Pressable>
               ))}
@@ -1253,6 +1305,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: Spacing.xs,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+  },
+  languageSelector: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+  },
+  languageOption: {
+    paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.sm,
   },

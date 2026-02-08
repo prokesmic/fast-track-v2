@@ -229,8 +229,141 @@ export const userProfiles = pgTable("user_profiles", {
   bio: text("bio"),
   isPublic: boolean("is_public").default(true), // allow others to see profile
   showOnLeaderboard: boolean("show_on_leaderboard").default(true),
+  language: text("language").default("en"), // user's preferred language
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// === WEEKLY CHALLENGES ===
+
+// Weekly Challenges (auto-generated)
+export const weeklyChallenges = pgTable("weekly_challenges", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  weekNumber: integer("week_number").notNull(),
+  year: integer("year").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  type: text("type").notNull(), // complete_fasts, total_hours, longest_fast, streak
+  targetValue: integer("target_value").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  rewardBadgeId: varchar("reward_badge_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Weekly Challenge Participants
+export const weeklyChallengeParticipants = pgTable("weekly_challenge_participants", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  weeklyChallengeId: varchar("weekly_challenge_id")
+    .notNull()
+    .references(() => weeklyChallenges.id),
+  userId: varchar("user_id")
+    .notNull()
+    .references(() => users.id),
+  progress: integer("progress").default(0),
+  completed: boolean("completed").default(false),
+  completedAt: timestamp("completed_at"),
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+// === FASTING CIRCLES ===
+
+// Fasting Circles - small accountability groups
+export const fastingCircles = pgTable("fasting_circles", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  creatorId: varchar("creator_id")
+    .notNull()
+    .references(() => users.id),
+  inviteCode: varchar("invite_code").unique().notNull(),
+  maxMembers: integer("max_members").default(10),
+  isPrivate: boolean("is_private").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Circle Members
+export const circleMembers = pgTable("circle_members", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  circleId: varchar("circle_id")
+    .notNull()
+    .references(() => fastingCircles.id),
+  userId: varchar("user_id")
+    .notNull()
+    .references(() => users.id),
+  role: text("role").default("member"), // admin, member
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+// Circle Messages
+export const circleMessages = pgTable("circle_messages", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  circleId: varchar("circle_id")
+    .notNull()
+    .references(() => fastingCircles.id),
+  userId: varchar("user_id")
+    .notNull()
+    .references(() => users.id),
+  type: text("type").default("text"), // text, achievement, fast_completed
+  content: text("content"),
+  metadata: text("metadata"), // JSON string for additional data
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// === AI COACH ===
+
+// AI Conversations
+export const aiConversations = pgTable("ai_conversations", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .notNull()
+    .references(() => users.id),
+  title: text("title"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// AI Messages
+export const aiMessages = pgTable("ai_messages", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id")
+    .notNull()
+    .references(() => aiConversations.id),
+  role: text("role").notNull(), // user, assistant
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// === SOCIAL NOTIFICATIONS ===
+
+// Social Notifications
+export const socialNotifications = pgTable("social_notifications", {
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .notNull()
+    .references(() => users.id),
+  type: text("type").notNull(), // circle_message, challenge_update, friend_request, etc.
+  title: text("title").notNull(),
+  body: text("body"),
+  data: text("data"), // JSON string for additional data
+  read: boolean("read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Zod schemas for validation
@@ -337,3 +470,72 @@ export type PostLike = typeof postLikes.$inferSelect;
 export type InsertPostLike = z.infer<typeof insertPostLikeSchema>;
 export type UserProfilePublic = typeof userProfiles.$inferSelect;
 export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
+
+// Weekly Challenges schemas
+export const insertWeeklyChallengeSchema = createInsertSchema(weeklyChallenges).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertWeeklyChallengeParticipantSchema = createInsertSchema(weeklyChallengeParticipants).omit({
+  id: true,
+  joinedAt: true,
+});
+
+// Fasting Circles schemas
+export const insertFastingCircleSchema = createInsertSchema(fastingCircles).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCircleMemberSchema = createInsertSchema(circleMembers).omit({
+  id: true,
+  joinedAt: true,
+});
+
+export const insertCircleMessageSchema = createInsertSchema(circleMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+// AI Coach schemas
+export const insertAiConversationSchema = createInsertSchema(aiConversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAiMessageSchema = createInsertSchema(aiMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Social Notifications schemas
+export const insertSocialNotificationSchema = createInsertSchema(socialNotifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Weekly Challenges types
+export type WeeklyChallenge = typeof weeklyChallenges.$inferSelect;
+export type InsertWeeklyChallenge = z.infer<typeof insertWeeklyChallengeSchema>;
+export type WeeklyChallengeParticipant = typeof weeklyChallengeParticipants.$inferSelect;
+export type InsertWeeklyChallengeParticipant = z.infer<typeof insertWeeklyChallengeParticipantSchema>;
+
+// Fasting Circles types
+export type FastingCircle = typeof fastingCircles.$inferSelect;
+export type InsertFastingCircle = z.infer<typeof insertFastingCircleSchema>;
+export type CircleMember = typeof circleMembers.$inferSelect;
+export type InsertCircleMember = z.infer<typeof insertCircleMemberSchema>;
+export type CircleMessage = typeof circleMessages.$inferSelect;
+export type InsertCircleMessage = z.infer<typeof insertCircleMessageSchema>;
+
+// AI Coach types
+export type AiConversation = typeof aiConversations.$inferSelect;
+export type InsertAiConversation = z.infer<typeof insertAiConversationSchema>;
+export type AiMessage = typeof aiMessages.$inferSelect;
+export type InsertAiMessage = z.infer<typeof insertAiMessageSchema>;
+
+// Social Notifications types
+export type SocialNotification = typeof socialNotifications.$inferSelect;
+export type InsertSocialNotification = z.infer<typeof insertSocialNotificationSchema>;
